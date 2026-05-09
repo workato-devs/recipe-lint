@@ -67,13 +67,28 @@ func flattenInputKeys(raw json.RawMessage, internals map[string]bool) (map[strin
 	return keys, nil
 }
 
+// builtinConnectorInternals lists platform-defined input fields per provider
+// that are managed by the Workato platform and should not appear in EIS.
+// These supplement connector_internals from lint-rules.json files.
+var builtinConnectorInternals = map[string][]string{
+	"py_eval": {"code", "code_output_schema_json", "name"},
+	"logger":  {"message"},
+}
+
 // getConnectorInternals returns the set of connector-internal field names for a step.
 func getConnectorInternals(step recipe.FlatStep, connRules map[string]*ConnectorRules) map[string]bool {
 	internals := make(map[string]bool)
-	if step.Code.Provider == nil || connRules == nil {
+	if step.Code.Provider == nil {
 		return internals
 	}
-	cr, ok := connRules[*step.Code.Provider]
+	provider := *step.Code.Provider
+	for _, name := range builtinConnectorInternals[provider] {
+		internals[name] = true
+	}
+	if connRules == nil {
+		return internals
+	}
+	cr, ok := connRules[provider]
 	if !ok {
 		return internals
 	}

@@ -33,7 +33,7 @@ func init() {
 		if ctx.Graph == nil {
 			return nil
 		}
-		return checkAllPathsReturn(ctx.Graph)
+		return checkAllPathsReturn(ctx.Graph, ctx.Parsed)
 	})
 
 	RegisterBuiltin("check_catch_returns_all_fields", func(ctx *BuiltinContext, rule *CustomRule) []LintDiagnostic {

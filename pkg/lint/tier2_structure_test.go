@@ -91,6 +91,39 @@ func TestTier2_AllPathsReturn(t *testing.T) {
 	}
 }
 
+func TestTier2_AllPathsReturn_PubSubTrigger_NoFire(t *testing.T) {
+	// workato_pub_sub triggers don't require terminal actions — ALL_PATHS_RETURN should not fire
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{
+			Code:        recipe.Code{Keyword: "trigger", Provider: strPtr("workato_pub_sub"), Name: "subscribe_to_topic", UUID: "trigger-sub-001"},
+			JSONPointer: "/code",
+		},
+		{
+			Code:        recipe.Code{Keyword: "action", Provider: strPtr("logger"), Name: "log_message", UUID: "log-001"},
+			JSONPointer: "/code/block/0",
+		},
+	}, nil)
+	graph := &igm.Graph{
+		Nodes: []igm.Node{
+			{ID: "trigger-sub-001", Kind: igm.NodeTrigger},
+			{ID: "log-001", Kind: igm.NodeAction},
+			{ID: "::end", Kind: igm.NodeEnd},
+		},
+		Edges: []igm.Edge{
+			{ID: "next|trigger-sub-001|log-001", From: "trigger-sub-001", To: "log-001", Kind: igm.EdgeNext},
+			{ID: "next|log-001|::end", From: "log-001", To: "::end", Kind: igm.EdgeNext},
+		},
+		Roots:    []string{"trigger-sub-001"},
+		AliasMap: map[string]string{"trigger": "trigger-sub-001"},
+	}
+	diags := checkAllPathsReturn(graph, parsed)
+	for _, d := range diags {
+		if d.RuleID == "ALL_PATHS_RETURN" {
+			t.Errorf("unexpected ALL_PATHS_RETURN for workato_pub_sub trigger: %s", d.Message)
+		}
+	}
+}
+
 func TestTier2_SuccessBeforeCatch(t *testing.T) {
 	_, parsed, graph := loadAndBuild(t, "api_endpoint_try_catch.recipe.json")
 	diags := evalTier2BuiltinForTest(t, parsed, graph)

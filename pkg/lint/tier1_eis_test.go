@@ -179,6 +179,94 @@ func TestEIS_OUTPUT_MIRRORS_INPUT_Info(t *testing.T) {
 	}
 }
 
+func TestEIS_PyEvalPlatformFields_NoFalsePositive(t *testing.T) {
+	eis := json.RawMessage(`[{"name":"code_input","label":"Input fields","type":"object","properties":[{"name":"schema","type":"string"},{"name":"data","type":"object"}]}]`)
+	input := rawJSON(t, map[string]interface{}{
+		"code":                     "def main(input):\n    return {'result': input['text']}\n",
+		"code_input":               map[string]interface{}{"data": map[string]interface{}{"text": "hello"}},
+		"code_output_schema_json":  `[{"name":"result","type":"string"}]`,
+		"name":                     "Reverse text",
+	})
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{
+			Code: recipe.Code{
+				Keyword:             "action",
+				Provider:            strPtr("py_eval"),
+				Name:                "invoke_custom_py_code",
+				Input:               input,
+				ExtendedInputSchema: eis,
+			},
+			JSONPointer: "/code/block/0",
+		},
+	}, nil)
+	diags := checkEIS(parsed, nil)
+	for _, d := range diags {
+		if d.RuleID == "EIS_MIRRORS_INPUT" {
+			t.Errorf("unexpected EIS_MIRRORS_INPUT for platform field: %s", d.Message)
+		}
+		if d.RuleID == "EIS_NAME_MATCH" && (d.Message == `EIS field "code" not found in input` || d.Message == `EIS field "code_output_schema_json" not found in input` || d.Message == `EIS field "name" not found in input`) {
+			t.Errorf("unexpected EIS_NAME_MATCH for platform field: %s", d.Message)
+		}
+	}
+}
+
+func TestEIS_LoggerMessage_NoFalsePositive(t *testing.T) {
+	eis := json.RawMessage(`[{"name":"user_logs_enabled","label":"Send to Workato log service","type":"string"}]`)
+	input := rawJSON(t, map[string]interface{}{
+		"message":           "Received event",
+		"user_logs_enabled": "false",
+	})
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{
+			Code: recipe.Code{
+				Keyword:             "action",
+				Provider:            strPtr("logger"),
+				Name:                "log_message",
+				Input:               input,
+				ExtendedInputSchema: eis,
+			},
+			JSONPointer: "/code/block/0",
+		},
+	}, nil)
+	diags := checkEIS(parsed, nil)
+	for _, d := range diags {
+		if d.RuleID == "EIS_MIRRORS_INPUT" {
+			t.Errorf("unexpected EIS_MIRRORS_INPUT for logger message field: %s", d.Message)
+		}
+	}
+}
+
+func TestEIS_PubSubTopicID_ConnectorInternal(t *testing.T) {
+	eis := json.RawMessage(`[{"name":"message","label":"Message","type":"object","properties":[{"name":"event_type","type":"string"},{"name":"payload","type":"string"}]}]`)
+	input := rawJSON(t, map[string]interface{}{
+		"message":  map[string]interface{}{"event_type": "test", "payload": "data"},
+		"topic_id": map[string]interface{}{"folder": "", "name": "golden-test-topic"},
+	})
+	connRules := map[string]*ConnectorRules{
+		"workato_pub_sub": {
+			ConnectorInternals: []string{"topic_id"},
+		},
+	}
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{
+			Code: recipe.Code{
+				Keyword:             "action",
+				Provider:            strPtr("workato_pub_sub"),
+				Name:                "publish_to_topic",
+				Input:               input,
+				ExtendedInputSchema: eis,
+			},
+			JSONPointer: "/code/block/0",
+		},
+	}, nil)
+	diags := checkEIS(parsed, connRules)
+	for _, d := range diags {
+		if d.RuleID == "EIS_MIRRORS_INPUT" {
+			t.Errorf("unexpected EIS_MIRRORS_INPUT for connector-internal topic_id: %s", d.Message)
+		}
+	}
+}
+
 func TestEIS_NoEIS_NoFalsePositives(t *testing.T) {
 	parsed := buildParsedRecipe("test", []recipe.FlatStep{
 		{

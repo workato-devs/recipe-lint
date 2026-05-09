@@ -84,8 +84,8 @@ func TestDP_VALID_JSON_Pass(t *testing.T) {
 	}
 }
 
-func TestDP_LHS_NO_FORMULA_Error(t *testing.T) {
-	// Simulate a condition LHS that's a formula
+func TestDP_LHS_NO_FORMULA_DatapillWithTransform_Pass(t *testing.T) {
+	// A datapill with a formula transform (e.g. .present?) is still datapill-based
 	input := rawJSON(t, map[string]interface{}{
 		"conditions": []interface{}{
 			map[string]interface{}{
@@ -106,8 +106,61 @@ func TestDP_LHS_NO_FORMULA_Error(t *testing.T) {
 		},
 	}, nil)
 	diags := checkDatapillsWithCatchAliases(parsed, nil)
+	if hasDiag(diags, "DP_LHS_NO_FORMULA") {
+		t.Error("unexpected DP_LHS_NO_FORMULA for datapill with formula transform")
+	}
+}
+
+func TestDP_LHS_NO_FORMULA_PureFormula_Error(t *testing.T) {
+	input := rawJSON(t, map[string]interface{}{
+		"conditions": []interface{}{
+			map[string]interface{}{
+				"lhs": `="some_value".upcase`,
+				"rhs": "SOME_VALUE",
+				"op":  "equals",
+			},
+		},
+	})
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{
+			Code: recipe.Code{
+				Keyword:  "if",
+				Provider: nil,
+				Input:    input,
+			},
+			JSONPointer: "/code/block/0",
+		},
+	}, nil)
+	diags := checkDatapillsWithCatchAliases(parsed, nil)
 	if !hasDiag(diags, "DP_LHS_NO_FORMULA") {
-		t.Error("expected DP_LHS_NO_FORMULA for formula in condition LHS")
+		t.Error("expected DP_LHS_NO_FORMULA for pure formula in condition LHS")
+	}
+}
+
+func TestDP_LHS_NO_FORMULA_CaseInsensitiveComparison_Pass(t *testing.T) {
+	// =dp('...brand...').upcase is a datapill with .upcase transform — legitimate pattern
+	input := rawJSON(t, map[string]interface{}{
+		"conditions": []interface{}{
+			map[string]interface{}{
+				"lhs": `=_dp('{"pill_type":"output","provider":"sf","line":"s1","path":["brand"]}').upcase`,
+				"rhs": "ERI",
+				"op":  "equals",
+			},
+		},
+	})
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{
+			Code: recipe.Code{
+				Keyword:  "if",
+				Provider: nil,
+				Input:    input,
+			},
+			JSONPointer: "/code/block/0",
+		},
+	}, nil)
+	diags := checkDatapillsWithCatchAliases(parsed, nil)
+	if hasDiag(diags, "DP_LHS_NO_FORMULA") {
+		t.Error("unexpected DP_LHS_NO_FORMULA for case-insensitive comparison pattern")
 	}
 }
 
@@ -231,6 +284,24 @@ func TestDP_NO_BODY_NATIVE_APIPlatform_Pass(t *testing.T) {
 	diags := checkDatapillsWithCatchAliases(parsed, nil)
 	if hasDiag(diags, "DP_NO_BODY_NATIVE") {
 		t.Error("unexpected DP_NO_BODY_NATIVE for API platform connector")
+	}
+}
+
+func TestDP_NO_BODY_NATIVE_CrossProvider_Pass(t *testing.T) {
+	// Datapill from REST source (uses body paths) consumed by a salesforce step — should NOT fire
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{
+			Code: recipe.Code{
+				Keyword:  "action",
+				Provider: strPtr("salesforce"),
+				Input:    rawJSON(t, map[string]interface{}{"field": `=_dp('{"pill_type":"output","provider":"rest","line":"make_request","path":["body","id"]}')`}),
+			},
+			JSONPointer: "/code/block/0",
+		},
+	}, nil)
+	diags := checkDatapillsWithCatchAliases(parsed, nil)
+	if hasDiag(diags, "DP_NO_BODY_NATIVE") {
+		t.Error("unexpected DP_NO_BODY_NATIVE: body path from REST source is valid regardless of consuming step provider")
 	}
 }
 

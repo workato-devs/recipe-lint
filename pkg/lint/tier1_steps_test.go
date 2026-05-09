@@ -297,6 +297,77 @@ func TestTier1_ActionNameValid_NilConnRules(t *testing.T) {
 	}
 }
 
+func TestTier1_ActionNameValid_TriggerPass(t *testing.T) {
+	connRules := map[string]*ConnectorRules{
+		"workato_db_table": {
+			ValidTriggerNames: []string{"new_records_polling", "new_records_realtime"},
+			ValidActionNames:  []string{"add_record", "get_records"},
+		},
+	}
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{Code: recipe.Code{Keyword: "trigger", Provider: strPtr("workato_db_table"), Name: "new_records_polling"}, JSONPointer: "/code"},
+	}, nil)
+	diags := checkActionNameValid(parsed, connRules)
+	if hasDiag(diags, "ACTION_NAME_VALID") {
+		t.Error("expected no ACTION_NAME_VALID for valid trigger name")
+	}
+}
+
+func TestTier1_ActionNameValid_TriggerFail(t *testing.T) {
+	connRules := map[string]*ConnectorRules{
+		"workato_db_table": {
+			ValidTriggerNames: []string{"new_records_polling", "new_records_realtime"},
+			ValidActionNames:  []string{"add_record", "get_records"},
+		},
+	}
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{Code: recipe.Code{Keyword: "trigger", Provider: strPtr("workato_db_table"), Name: "new_record_realtime"}, JSONPointer: "/code"},
+	}, nil)
+	diags := checkActionNameValid(parsed, connRules)
+	if !hasDiag(diags, "ACTION_NAME_VALID") {
+		t.Error("expected ACTION_NAME_VALID for invalid trigger name")
+	}
+	if len(diags) != 1 {
+		t.Fatalf("expected 1 diagnostic, got %d", len(diags))
+	}
+	if diags[0].Level != LevelError {
+		t.Errorf("expected error level, got %s", diags[0].Level)
+	}
+}
+
+func TestTier1_ActionNameValid_TriggerNotCheckedAgainstActionList(t *testing.T) {
+	connRules := map[string]*ConnectorRules{
+		"workato_db_table": {
+			ValidTriggerNames: []string{"new_records_polling"},
+			ValidActionNames:  []string{"add_record", "get_records"},
+		},
+	}
+	// "add_record" is a valid action name but NOT a valid trigger name
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{Code: recipe.Code{Keyword: "trigger", Provider: strPtr("workato_db_table"), Name: "add_record"}, JSONPointer: "/code"},
+	}, nil)
+	diags := checkActionNameValid(parsed, connRules)
+	if !hasDiag(diags, "ACTION_NAME_VALID") {
+		t.Error("expected ACTION_NAME_VALID: trigger name validated against trigger list, not action list")
+	}
+}
+
+func TestTier1_ActionNameValid_TriggerEmptyTriggerList(t *testing.T) {
+	connRules := map[string]*ConnectorRules{
+		"workato_db_table": {
+			ValidTriggerNames: []string{},
+			ValidActionNames:  []string{"add_record"},
+		},
+	}
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{Code: recipe.Code{Keyword: "trigger", Provider: strPtr("workato_db_table"), Name: "anything"}, JSONPointer: "/code"},
+	}, nil)
+	diags := checkActionNameValid(parsed, connRules)
+	if hasDiag(diags, "ACTION_NAME_VALID") {
+		t.Error("expected no ACTION_NAME_VALID when valid_trigger_names is empty")
+	}
+}
+
 func TestTier1_ActionNameValid_NoNameField(t *testing.T) {
 	connRules := map[string]*ConnectorRules{
 		"rest": {ValidActionNames: []string{"make_request_v2"}},
