@@ -192,9 +192,15 @@ func checkTerminalCoverage(graph *igm.Graph, parsed *recipe.ParsedRecipe) []Lint
 
 // checkAllPathsReturn verifies that every control flow path terminates in a return_response
 // (or return_result). A non-terminal dangling path is flagged.
+// Only applies to API endpoint and callable recipe triggers — other trigger types
+// (data table, polling, clock) don't require explicit terminal actions.
 // Rule: ALL_PATHS_RETURN
-func checkAllPathsReturn(graph *igm.Graph) []LintDiagnostic {
+func checkAllPathsReturn(graph *igm.Graph, parsed *recipe.ParsedRecipe) []LintDiagnostic {
 	var diags []LintDiagnostic
+
+	if !isTerminalRequiredTrigger(parsed) {
+		return diags
+	}
 
 	// Find non-terminal nodes whose only outgoing edge goes to ::end via "next" (not terminal)
 	for _, e := range graph.Edges {
@@ -355,6 +361,28 @@ func isAPIPlatformTrigger(parsed *recipe.ParsedRecipe) bool {
 	return trigger.Code.Provider != nil && *trigger.Code.Provider == "workato_api_platform"
 }
 
+// isTerminalRequiredTrigger returns true for trigger types where every control
+// flow path must end with an explicit terminal action (return_response,
+// return_result, workflow_return_result, or stop). This includes API endpoints,
+// callable recipes, and genie skills. Data table, polling, and clock triggers
+// do not require explicit terminal actions.
+func isTerminalRequiredTrigger(parsed *recipe.ParsedRecipe) bool {
+	if len(parsed.Steps) == 0 {
+		return false
+	}
+	trigger := parsed.Steps[0]
+	if trigger.Code.Provider == nil {
+		return false
+	}
+	p := *trigger.Code.Provider
+	switch p {
+	case "workato_api_platform", "workato_recipe_function", "workato_genie":
+		return true
+	default:
+		return false
+	}
+}
+
 // extractDeclaredResponseCodes extracts HTTP status codes from trigger responses.
 func extractDeclaredResponseCodes(parsed *recipe.ParsedRecipe) []string {
 	if len(parsed.Steps) == 0 {
@@ -443,7 +471,8 @@ func extractResponseFieldsByCode(parsed *recipe.ParsedRecipe) map[string][]strin
 	return result
 }
 
-// getReturnResponseFields returns the set of field names provided in a return_response's input.response.
+// getReturnResponseFields returns the set of field names provided in a
+// return_response's input.response or a workflow_return_result's input.result.
 func getReturnResponseFields(parsed *recipe.ParsedRecipe, nodeID string) map[string]bool {
 	step := findStepByUUID(parsed, nodeID)
 	if step == nil || step.Code.Input == nil {
@@ -455,18 +484,22 @@ func getReturnResponseFields(parsed *recipe.ParsedRecipe, nodeID string) map[str
 		return nil
 	}
 
-	responseRaw, ok := input["response"]
+	// Try input.response (return_response) first, then input.result (workflow_return_result)
+	containerRaw, ok := input["response"]
 	if !ok {
-		return nil
+		containerRaw, ok = input["result"]
+		if !ok {
+			return nil
+		}
 	}
 
-	var responseFields map[string]json.RawMessage
-	if err := json.Unmarshal(responseRaw, &responseFields); err != nil {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(containerRaw, &fields); err != nil {
 		return nil
 	}
 
 	result := make(map[string]bool)
-	for k := range responseFields {
+	for k := range fields {
 		result[k] = true
 	}
 	return result

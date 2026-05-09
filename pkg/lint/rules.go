@@ -12,6 +12,7 @@ type ConnectorRules struct {
 	Connector          string       `json:"connector"`
 	ConnectorInternals []string     `json:"connector_internals"`
 	ValidActionNames   []string     `json:"valid_action_names,omitempty"`
+	ValidTriggerNames  []string     `json:"valid_trigger_names,omitempty"`
 	ActionRules        []ActionRule   `json:"action_rules"`
 	Rules              []CustomRule   `json:"rules,omitempty"`
 }

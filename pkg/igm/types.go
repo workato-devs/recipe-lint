@@ -1,5 +1,15 @@
 package igm
 
+// TriggerType classifies the kind of trigger on a recipe.
+type TriggerType string
+
+const (
+	TriggerAPIEndpoint TriggerType = "api_endpoint"
+	TriggerCallable    TriggerType = "callable"
+	TriggerGenieSkill  TriggerType = "genie_skill"
+	TriggerGeneric     TriggerType = "generic"
+)
+
 // NodeKind classifies the type of an IGM node.
 type NodeKind string
 
@@ -27,16 +37,18 @@ const (
 
 // Node represents a single node in the IGM graph.
 type Node struct {
-	ID         string   `json:"id"`
-	Kind       NodeKind `json:"kind"`
-	Label      string   `json:"label"`
-	Pointer    string   `json:"pointer"`              // JSON Pointer into recipe
-	IsTerminal bool     `json:"is_terminal,omitempty"` // true for return_response / return_result
-	Provider   *string  `json:"provider,omitempty"`    // connector provider name
-	StepAs     string   `json:"step_as,omitempty"`     // step alias (used by datapills as "line")
-	StepName   string   `json:"step_name,omitempty"`   // action name
-	ParentID   string   `json:"parent_id,omitempty"`   // parent node ID for containment
-	HTTPStatus string   `json:"http_status,omitempty"` // for return_response actions
+	ID                  string      `json:"id"`
+	Kind                NodeKind    `json:"kind"`
+	Label               string      `json:"label"`
+	Pointer             string      `json:"pointer"`                           // JSON Pointer into recipe
+	IsTerminal          bool        `json:"is_terminal,omitempty"`             // true for return_response / return_result / stop
+	Provider            *string     `json:"provider,omitempty"`                // connector provider name
+	ProviderDisplayName string      `json:"provider_display_name,omitempty"`   // human-readable provider name
+	StepAs              string      `json:"step_as,omitempty"`                 // step alias (used by datapills as "line")
+	StepName            string      `json:"step_name,omitempty"`               // action name
+	ParentID            string      `json:"parent_id,omitempty"`               // parent node ID for containment
+	HTTPStatus          string      `json:"http_status,omitempty"`             // for return_response actions
+	TriggerType         TriggerType `json:"trigger_type,omitempty"`            // classification of trigger type
 }
 
 // Edge represents a directed edge in the IGM graph.

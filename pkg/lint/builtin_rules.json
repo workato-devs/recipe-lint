@@ -392,6 +392,61 @@
     },
 
     {
+      "rule_id": "UPDATE_VARS_RAW_FORM",
+      "tier": 1,
+      "level": "error",
+      "message": "update_variables uses structured form that is silently dropped on import",
+      "suggested_fix": "Replace the variables:[{variable,value}] array with input_mode:\"raw\" and flat per-variable keys — see the recipe-skills variables-and-lists pattern doc.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_update_vars_raw_form" }
+    },
+    {
+      "rule_id": "BODY_FORMULA_MODE",
+      "tier": 1,
+      "level": "warn",
+      "message": "Body field uses formula mode (= prefix) which may be silently stripped",
+      "suggested_fix": "Use #{} interpolation in the body field, or build the JSON body in a py_eval step upstream.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_body_formula_mode" }
+    },
+    {
+      "rule_id": "BUTTON_PARAMS_FORMAT",
+      "tier": 1,
+      "level": "warn",
+      "message": "Button params uses URL-encoded format which Workbot silently drops",
+      "suggested_fix": "Use space-separated colon format: \"key: value\" instead of \"key=value&key=value\".",
+      "scope": "recipe",
+      "assert": { "builtin": "check_button_params_format" }
+    },
+    {
+      "rule_id": "STOP_MISSING_REASON",
+      "tier": 1,
+      "level": "warn",
+      "message": "stop action is missing stop_reason field",
+      "suggested_fix": "Add a stop_reason field to the stop action input — this field is required for recipe activation.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_stop_missing_reason" }
+    },
+    {
+      "rule_id": "STOP_ERROR_IN_GENIE",
+      "tier": 1,
+      "level": "error",
+      "message": "stop with stop_with_error:\"true\" is rejected in genie skill recipes",
+      "suggested_fix": "Use workflow_return_result with success:false to return errors from genie skills.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_genie_authoring" }
+    },
+    {
+      "rule_id": "GENIE_SKILL_DESCRIPTION_EMPTY",
+      "tier": 1,
+      "level": "warn",
+      "message": "Genie skill trigger has empty description — UI will show blank skill entry",
+      "suggested_fix": "Add a descriptive input.description to the start_workflow trigger explaining when and how to use this skill.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_genie_authoring" }
+    },
+
+    {
       "rule_id": "CATCH_LAST_IN_TRY",
       "tier": 2,
       "level": "error",

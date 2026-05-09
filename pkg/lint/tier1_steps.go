@@ -204,7 +204,9 @@ func checkConfigProviderMatch(parsed *recipe.ParsedRecipe, connRules map[string]
 	return diags
 }
 
-// checkActionNameValid verifies that action names are valid for their provider.
+// checkActionNameValid verifies that action and trigger names are valid for
+// their provider. Triggers are validated against valid_trigger_names; actions
+// against valid_action_names.
 func checkActionNameValid(parsed *recipe.ParsedRecipe, connRules map[string]*ConnectorRules) []LintDiagnostic {
 	var diags []LintDiagnostic
 	if len(connRules) == 0 {
@@ -222,6 +224,30 @@ func checkActionNameValid(parsed *recipe.ParsedRecipe, connRules map[string]*Con
 		if !ok {
 			continue
 		}
+
+		if step.Code.Keyword == "trigger" {
+			if len(cr.ValidTriggerNames) == 0 {
+				continue
+			}
+			valid := false
+			for _, name := range cr.ValidTriggerNames {
+				if step.Code.Name == name {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				diags = append(diags, LintDiagnostic{
+					Level:   LevelError,
+					Message: fmt.Sprintf("Trigger name %q is not valid for provider %q; expected one of %v", step.Code.Name, provider, cr.ValidTriggerNames),
+					Source:  &SourceRef{JSONPointer: step.JSONPointer + "/name"},
+					RuleID:  "ACTION_NAME_VALID",
+					Tier:    1,
+				})
+			}
+			continue
+		}
+
 		if len(cr.ValidActionNames) == 0 {
 			continue
 		}

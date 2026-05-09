@@ -46,10 +46,39 @@ func TestTier3_DPStepReachable(t *testing.T) {
 	_, parsed, graph := loadAndBuild(t, "simple_connector.recipe.json")
 	diags := evalTier3BuiltinForTest(t, parsed, graph)
 
-	// All datapill references in this fixture are reachable (trigger → update_booking → return)
+	// All datapill references in this fixture are reachable, including trigger pills
+	// referenced from inside catch blocks (update_booking_catch references trigger)
 	for _, d := range diags {
 		if d.RuleID == "DP_STEP_REACHABLE" {
-			t.Logf("DP_STEP_REACHABLE: %s", d.Message)
+			t.Errorf("unexpected DP_STEP_REACHABLE: %s", d.Message)
+		}
+	}
+}
+
+func TestTier3_DPLineResolves_CatchAlias(t *testing.T) {
+	_, parsed, graph := loadAndBuild(t, "api_endpoint_try_catch.recipe.json")
+
+	// Verify catch alias is registered in the graph
+	if _, ok := graph.AliasMap["checkin_catch"]; !ok {
+		t.Fatal("expected catch alias 'checkin_catch' in AliasMap")
+	}
+
+	diags := evalTier3BuiltinForTest(t, parsed, graph)
+	for _, d := range diags {
+		if d.RuleID == "DP_LINE_RESOLVES" {
+			t.Errorf("unexpected DP_LINE_RESOLVES: %s", d.Message)
+		}
+	}
+}
+
+func TestTier3_DPStepReachable_TriggerFromCatchBlock(t *testing.T) {
+	_, parsed, graph := loadAndBuild(t, "api_endpoint_try_catch.recipe.json")
+	diags := evalTier3BuiltinForTest(t, parsed, graph)
+
+	// Trigger data is always reachable from catch blocks
+	for _, d := range diags {
+		if d.RuleID == "DP_STEP_REACHABLE" {
+			t.Errorf("unexpected DP_STEP_REACHABLE: %s", d.Message)
 		}
 	}
 }

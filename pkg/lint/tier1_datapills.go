@@ -123,17 +123,6 @@ func lintDatapillStringWithCatch(ctx recipe.StringContext, step *recipe.FlatStep
 		}
 	}
 
-	// DP_LHS_NO_FORMULA
-	if ctx.IsCondLHS && strings.HasPrefix(value, "=") {
-		diags = append(diags, LintDiagnostic{
-			Level:   LevelWarn,
-			Message: "Condition input should be a datapill, not a formula expression",
-			Source:  &SourceRef{JSONPointer: ctx.Pointer},
-			RuleID:  "DP_LHS_NO_FORMULA",
-			Tier:    1,
-		})
-	}
-
 	isFormula := strings.HasPrefix(value, "=")
 
 	// DP_INTERPOLATION_SINGLE
@@ -184,11 +173,17 @@ func lintDatapillStringWithCatch(ctx recipe.StringContext, step *recipe.FlatStep
 			continue
 		}
 
-		// DP_NO_BODY_NATIVE
-		if containsBody(dp.Payload.Path) && !isAPIPlatformConnector(step) {
+		// DP_NO_BODY_NATIVE — check the datapill's source provider, not the consuming step
+		if containsBody(dp.Payload.Path) && !isAPIPlatformSourceProvider(dp.Payload) {
+			srcProvider := "<nil>"
+			if dp.Payload.Provider != nil {
+				if s, ok := dp.Payload.Provider.(string); ok {
+					srcProvider = s
+				}
+			}
 			diags = append(diags, LintDiagnostic{
 				Level:   LevelWarn,
-				Message: fmt.Sprintf("Datapill path contains \"body\" but step provider %q is not an API platform connector", providerName(step)),
+				Message: fmt.Sprintf("Datapill path contains \"body\" but source provider %q is not an API platform connector", srcProvider),
 				Source:  &SourceRef{JSONPointer: ctx.Pointer},
 				RuleID:  "DP_NO_BODY_NATIVE",
 				Tier:    1,
@@ -222,19 +217,16 @@ func containsBody(path []interface{}) bool {
 	return false
 }
 
-// isAPIPlatformConnector checks if the step's provider is an API platform connector.
-func isAPIPlatformConnector(step *recipe.FlatStep) bool {
-	if step.Code.Provider == nil {
+// isAPIPlatformSourceProvider checks if the datapill's source provider is an
+// API platform connector that uses body-prefixed output paths.
+func isAPIPlatformSourceProvider(payload *DatapillPayload) bool {
+	if payload.Provider == nil {
 		return false
 	}
-	p := *step.Code.Provider
+	p, ok := payload.Provider.(string)
+	if !ok {
+		return false
+	}
 	return p == "workato_api_platform" || p == "rest" || p == "http"
 }
 
-// providerName returns the provider name for a step, or "<none>" if nil.
-func providerName(step *recipe.FlatStep) string {
-	if step.Code.Provider == nil {
-		return "<none>"
-	}
-	return *step.Code.Provider
-}
