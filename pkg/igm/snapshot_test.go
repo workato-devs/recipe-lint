@@ -36,12 +36,11 @@ func snapshotFixtures(t *testing.T) []string {
 
 	dir := os.Getenv("RECIPE_CORPUS_DIR")
 	if dir != "" {
-		// Add a diverse selection from the corpus if available
 		corpusFixtures := []string{
-			"atomic-salesforce-recipes/upsert_contact.recipe.json",
-			"orchestrator-recipes/check_in_guest.recipe.json",
-			"orchestrator-recipes/create_booking_orchestrator.recipe.json",
-			"orchestrator-recipes/manage_cases_orchestrator.recipe.json",
+			"upsert_contact.recipe.json",
+			"check_in_guest.recipe.json",
+			"create_booking_orchestrator.recipe.json",
+			"manage_cases_orchestrator.recipe.json",
 		}
 		for _, f := range corpusFixtures {
 			fixtures = append(fixtures, filepath.Join(dir, f))
@@ -202,6 +201,9 @@ func compareNode(t *testing.T, id string, goN, tsN SnapshotNode) {
 	if goN.StepAs != tsN.StepAs {
 		t.Errorf("node %q stepAs: Go=%q TS=%q", id, goN.StepAs, tsN.StepAs)
 	}
+	if goN.StepName != tsN.StepName {
+		t.Errorf("node %q stepName: Go=%q TS=%q", id, goN.StepName, tsN.StepName)
+	}
 
 	goProvider := "<nil>"
 	if goN.Provider != nil {
@@ -213,6 +215,13 @@ func compareNode(t *testing.T, id string, goN, tsN SnapshotNode) {
 	}
 	if goProvider != tsProvider {
 		t.Errorf("node %q provider: Go=%s TS=%s", id, goProvider, tsProvider)
+	}
+
+	if goN.ProviderDisplayName != tsN.ProviderDisplayName {
+		t.Errorf("node %q providerDisplayName: Go=%q TS=%q", id, goN.ProviderDisplayName, tsN.ProviderDisplayName)
+	}
+	if goN.TriggerType != tsN.TriggerType {
+		t.Errorf("node %q triggerType: Go=%q TS=%q", id, goN.TriggerType, tsN.TriggerType)
 	}
 
 	if goN.HTTPStatus != tsN.HTTPStatus {

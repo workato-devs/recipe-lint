@@ -17,15 +17,17 @@ type Snapshot struct {
 
 // SnapshotNode is a normalized node for snapshot comparison.
 type SnapshotNode struct {
-	ID         string `json:"id"`
-	Kind       string `json:"kind"`
-	Label      string `json:"label"`
-	Pointer    string `json:"pointer"`
-	IsTerminal bool   `json:"is_terminal"`
-	Provider   *string `json:"provider"`
-	StepAs     string `json:"step_as"`
-	StepName   string `json:"step_name"`
-	HTTPStatus string `json:"http_status"`
+	ID                  string `json:"id"`
+	Kind                string `json:"kind"`
+	Label               string `json:"label"`
+	Pointer             string `json:"pointer"`
+	IsTerminal          bool   `json:"is_terminal"`
+	Provider            *string `json:"provider"`
+	ProviderDisplayName string `json:"provider_display_name"`
+	StepAs              string `json:"step_as"`
+	StepName            string `json:"step_name"`
+	HTTPStatus          string `json:"http_status"`
+	TriggerType         string `json:"trigger_type"`
 }
 
 // SnapshotEdge is a normalized edge for snapshot comparison.
@@ -42,15 +44,17 @@ func (g *Graph) ToSnapshot() *Snapshot {
 	nodes := make([]SnapshotNode, 0, len(g.Nodes))
 	for _, n := range g.Nodes {
 		nodes = append(nodes, SnapshotNode{
-			ID:         n.ID,
-			Kind:       string(n.Kind),
-			Label:      n.Label,
-			Pointer:    n.Pointer,
-			IsTerminal: n.IsTerminal,
-			Provider:   n.Provider,
-			StepAs:     n.StepAs,
-			StepName:   n.StepName,
-			HTTPStatus: n.HTTPStatus,
+			ID:                  n.ID,
+			Kind:                string(n.Kind),
+			Label:               n.Label,
+			Pointer:             n.Pointer,
+			IsTerminal:          n.IsTerminal,
+			Provider:            n.Provider,
+			ProviderDisplayName: n.ProviderDisplayName,
+			StepAs:              n.StepAs,
+			StepName:            n.StepName,
+			HTTPStatus:          n.HTTPStatus,
+			TriggerType:         string(n.TriggerType),
 		})
 	}
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })

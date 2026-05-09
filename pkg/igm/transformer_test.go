@@ -225,6 +225,334 @@ func TestTransform_DeterministicIDs(t *testing.T) {
 	}
 }
 
+func TestTransform_GenieTriggerType(t *testing.T) {
+	data := []byte(`{
+		"name": "Get user manager",
+		"code": {
+			"keyword": "trigger",
+			"provider": "workato_genie",
+			"name": "start_workflow",
+			"as": "trigger",
+			"number": 0,
+			"uuid": "trigger-001",
+			"input": {
+				"description": "Look up the requesting user's manager",
+				"input_schema": "[{\"name\":\"user_email\",\"type\":\"string\"}]",
+				"output_schema": "[{\"name\":\"manager_email\",\"type\":\"string\"}]"
+			},
+			"block": [
+				{
+					"keyword": "action",
+					"provider": "workato_genie",
+					"name": "workflow_return_result",
+					"as": "return_success",
+					"number": 1,
+					"uuid": "return-001",
+					"input": { "result": { "manager_email": "test@example.com" } }
+				}
+			]
+		},
+		"config": [{"keyword": "application", "provider": "workato_genie"}]
+	}`)
+
+	g, err := Transform(data)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	trigger := g.NodeByID("trigger-001")
+	if trigger == nil {
+		t.Fatal("missing trigger node")
+	}
+	if trigger.TriggerType != TriggerGenieSkill {
+		t.Errorf("TriggerType = %q, want %q", trigger.TriggerType, TriggerGenieSkill)
+	}
+	if trigger.ProviderDisplayName != "Genie" {
+		t.Errorf("ProviderDisplayName = %q, want %q", trigger.ProviderDisplayName, "Genie")
+	}
+}
+
+func TestTransform_GenieSchemaExtraction(t *testing.T) {
+	data := []byte(`{
+		"name": "Schema test",
+		"code": {
+			"keyword": "trigger",
+			"provider": "workato_genie",
+			"name": "start_workflow",
+			"as": "trigger",
+			"number": 0,
+			"uuid": "trigger-001",
+			"input": {
+				"description": "Test skill",
+				"input_schema": "[{\"name\":\"email\",\"type\":\"string\"}]",
+				"output_schema": "[{\"name\":\"result\",\"type\":\"string\"}]"
+			},
+			"block": []
+		},
+		"config": [{"keyword": "application", "provider": "workato_genie"}]
+	}`)
+
+	g, err := Transform(data)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	trigger := g.NodeByID("trigger-001")
+	if trigger == nil {
+		t.Fatal("missing trigger node")
+	}
+	if trigger.Kind != NodeTrigger {
+		t.Errorf("trigger kind = %s, want trigger", trigger.Kind)
+	}
+	if trigger.TriggerType != TriggerGenieSkill {
+		t.Errorf("TriggerType = %q, want genie_skill", trigger.TriggerType)
+	}
+}
+
+func TestTransform_WorkflowReturnResultTerminal(t *testing.T) {
+	data := []byte(`{
+		"name": "Genie return test",
+		"code": {
+			"keyword": "trigger",
+			"provider": "workato_genie",
+			"name": "start_workflow",
+			"as": "trigger",
+			"number": 0,
+			"uuid": "trigger-001",
+			"input": { "description": "Test" },
+			"block": [
+				{
+					"keyword": "action",
+					"provider": "workato_genie",
+					"name": "workflow_return_result",
+					"as": "return_success",
+					"number": 1,
+					"uuid": "return-001",
+					"input": { "result": { "success": "true", "manager_email": "a@b.com" } }
+				}
+			]
+		},
+		"config": [{"keyword": "application", "provider": "workato_genie"}]
+	}`)
+
+	g, err := Transform(data)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	returnNode := g.NodeByID("return-001")
+	if returnNode == nil {
+		t.Fatal("missing return node")
+	}
+	if !returnNode.IsTerminal {
+		t.Error("workflow_return_result should be terminal")
+	}
+
+	// Should have terminal edge to ::end
+	hasTerminalEdge := false
+	for _, e := range g.InEdges("::end") {
+		if e.From == "return-001" && e.Kind == EdgeTerminal {
+			hasTerminalEdge = true
+		}
+	}
+	if !hasTerminalEdge {
+		t.Error("expected terminal edge from workflow_return_result to ::end")
+	}
+}
+
+func TestTransform_StopKeywordTerminal(t *testing.T) {
+	data := []byte(`{
+		"name": "Stop test",
+		"code": {
+			"keyword": "trigger",
+			"provider": "workato_genie",
+			"name": "start_workflow",
+			"as": "trigger",
+			"number": 0,
+			"uuid": "trigger-001",
+			"input": { "description": "Test" },
+			"block": [
+				{
+					"keyword": "stop",
+					"number": 1,
+					"uuid": "stop-001",
+					"input": { "stop_with_error": "false" }
+				}
+			]
+		},
+		"config": [{"keyword": "application", "provider": "workato_genie"}]
+	}`)
+
+	g, err := Transform(data)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	stopNode := g.NodeByID("stop-001")
+	if stopNode == nil {
+		t.Fatal("missing stop node")
+	}
+	if stopNode.Kind != NodeAction {
+		t.Errorf("stop node kind = %s, want action", stopNode.Kind)
+	}
+	if !stopNode.IsTerminal {
+		t.Error("stop keyword should be terminal")
+	}
+
+	// Should have terminal edge to ::end
+	hasTerminalEdge := false
+	for _, e := range g.InEdges("::end") {
+		if e.From == "stop-001" && e.Kind == EdgeTerminal {
+			hasTerminalEdge = true
+		}
+	}
+	if !hasTerminalEdge {
+		t.Error("expected terminal edge from stop to ::end")
+	}
+}
+
+func TestTransform_ProviderDisplayNames(t *testing.T) {
+	data := []byte(`{
+		"name": "Display names test",
+		"code": {
+			"keyword": "trigger",
+			"provider": "workato_db_table",
+			"name": "new_record_v2",
+			"as": "trigger",
+			"number": 0,
+			"uuid": "trigger-001",
+			"input": {},
+			"block": [
+				{
+					"keyword": "action",
+					"provider": "py_eval",
+					"name": "invoke_custom_py_code",
+					"as": "python_step",
+					"number": 1,
+					"uuid": "py-001",
+					"input": {}
+				},
+				{
+					"keyword": "action",
+					"provider": "workato_variable",
+					"name": "update_variables",
+					"as": "set_var",
+					"number": 2,
+					"uuid": "var-001",
+					"input": {}
+				}
+			]
+		},
+		"config": [
+			{"keyword": "application", "provider": "workato_db_table"},
+			{"keyword": "application", "provider": "py_eval"},
+			{"keyword": "application", "provider": "workato_variable"}
+		]
+	}`)
+
+	g, err := Transform(data)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	tests := []struct {
+		nodeID  string
+		display string
+	}{
+		{"trigger-001", "Data Table"},
+		{"py-001", "Python"},
+		{"var-001", "Variable"},
+	}
+	for _, tt := range tests {
+		node := g.NodeByID(tt.nodeID)
+		if node == nil {
+			t.Errorf("missing node %s", tt.nodeID)
+			continue
+		}
+		if node.ProviderDisplayName != tt.display {
+			t.Errorf("node %s ProviderDisplayName = %q, want %q", tt.nodeID, node.ProviderDisplayName, tt.display)
+		}
+	}
+}
+
+func TestTransform_StopKeywordInBlock(t *testing.T) {
+	data := []byte(`{
+		"name": "Stop in if test",
+		"code": {
+			"keyword": "trigger",
+			"provider": "workato_api_platform",
+			"name": "api_trigger",
+			"as": "trigger",
+			"number": 0,
+			"uuid": "trigger-001",
+			"input": {},
+			"block": [
+				{
+					"keyword": "if",
+					"as": "check",
+					"number": 1,
+					"uuid": "if-001",
+					"block": [
+						{
+							"keyword": "stop",
+							"number": 2,
+							"uuid": "stop-001",
+							"input": { "stop_with_error": "false" }
+						},
+						{
+							"keyword": "else",
+							"block": [
+								{
+									"keyword": "action",
+									"provider": "workato_api_platform",
+									"name": "return_response",
+									"as": "return_ok",
+									"number": 3,
+									"uuid": "return-001",
+									"input": { "http_status_code": "200" }
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		"config": [{"keyword": "application", "provider": "workato_api_platform"}]
+	}`)
+
+	g, err := Transform(data)
+	if err != nil {
+		t.Fatalf("Transform failed: %v", err)
+	}
+
+	stopNode := g.NodeByID("stop-001")
+	if stopNode == nil {
+		t.Fatal("missing stop node")
+	}
+	if !stopNode.IsTerminal {
+		t.Error("stop in if branch should be terminal")
+	}
+
+	returnNode := g.NodeByID("return-001")
+	if returnNode == nil {
+		t.Fatal("missing return node")
+	}
+	if !returnNode.IsTerminal {
+		t.Error("return_response should be terminal")
+	}
+
+	// Both terminal nodes should have terminal edges to ::end
+	terminalEdges := 0
+	for _, e := range g.InEdges("::end") {
+		if e.Kind == EdgeTerminal {
+			terminalEdges++
+		}
+	}
+	if terminalEdges != 2 {
+		t.Errorf("expected 2 terminal edges to ::end, got %d", terminalEdges)
+	}
+}
+
 func TestTransform_InvalidJSON(t *testing.T) {
 	_, err := Transform([]byte(`not json`))
 	if err == nil {

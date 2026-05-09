@@ -135,14 +135,62 @@ func isExecutableStep(step *stepBlock) bool {
 	return false
 }
 
-// isExplicitTerminal returns true for return_response and return_result actions.
+// isExplicitTerminal returns true for return_response, return_result,
+// workflow_return_result, and stop actions.
 func isExplicitTerminal(step *stepBlock) bool {
+	if step.Keyword == "stop" || step.Name == "stop" {
+		return true
+	}
 	if step.Provider == nil {
 		return false
 	}
 	p := *step.Provider
 	return (p == "workato_api_platform" && step.Name == "return_response") ||
-		(p == "workato_recipe_function" && step.Name == "return_result")
+		(p == "workato_recipe_function" && step.Name == "return_result") ||
+		(p == "workato_genie" && step.Name == "workflow_return_result")
+}
+
+// isGenieSkillTrigger returns true if the step is a genie skill trigger.
+func isGenieSkillTrigger(step *stepBlock) bool {
+	return step.Provider != nil && *step.Provider == "workato_genie" && step.Name == "start_workflow"
+}
+
+// getTriggerType classifies a trigger step into a TriggerType.
+func getTriggerType(step *stepBlock) TriggerType {
+	if step.Provider == nil {
+		return TriggerGeneric
+	}
+	p := *step.Provider
+	switch {
+	case p == "workato_api_platform" && step.Name == "receive_request":
+		return TriggerAPIEndpoint
+	case p == "workato_recipe_function" && step.Name == "execute":
+		return TriggerCallable
+	case p == "workato_genie" && step.Name == "start_workflow":
+		return TriggerGenieSkill
+	default:
+		return TriggerGeneric
+	}
+}
+
+// providerDisplayNames maps provider identifiers to human-readable names.
+var providerDisplayNames = map[string]string{
+	"workato_api_platform":    "API Platform",
+	"workato_recipe_function": "Recipe Function",
+	"workato_genie":           "Genie",
+	"workato_db_table":        "Data Table",
+	"workato_variable":        "Variable",
+	"py_eval":                 "Python",
+	"rest":                    "REST API",
+	"slack_bot":               "Slack",
+}
+
+// getProviderDisplayName returns a human-readable display name for a provider.
+func getProviderDisplayName(provider string) string {
+	if name, ok := providerDisplayNames[provider]; ok {
+		return name
+	}
+	return provider
 }
 
 // httpStatusFromInput extracts http_status_code from step input if present.
@@ -179,7 +227,7 @@ func (ctx *buildContext) processStep(raw json.RawMessage, pointer, parentID stri
 	switch step.Keyword {
 	case "trigger":
 		return ctx.processTrigger(&step, pointer, parentID)
-	case "action":
+	case "action", "stop":
 		return ctx.processAction(&step, pointer, parentID)
 	case "if":
 		return ctx.processIf(&step, pointer, parentID)
@@ -281,15 +329,21 @@ func (ctx *buildContext) processStepToResult(step *stepBlock, raw json.RawMessag
 
 func (ctx *buildContext) processTrigger(step *stepBlock, pointer, parentID string) string {
 	id := nodeID(step, pointer)
+	var displayName string
+	if step.Provider != nil {
+		displayName = getProviderDisplayName(*step.Provider)
+	}
 	ctx.addNode(Node{
-		ID:       id,
-		Kind:     NodeTrigger,
-		Label:    labelOr(step.As, step.Name, "trigger"),
-		Pointer:  pointer,
-		Provider: step.Provider,
-		StepAs:   step.As,
-		StepName: step.Name,
-		ParentID: parentID,
+		ID:                  id,
+		Kind:                NodeTrigger,
+		Label:               labelOr(step.As, step.Name, "trigger"),
+		Pointer:             pointer,
+		Provider:            step.Provider,
+		ProviderDisplayName: displayName,
+		StepAs:              step.As,
+		StepName:            step.Name,
+		ParentID:            parentID,
+		TriggerType:         getTriggerType(step),
 	})
 	ctx.registerAlias(step.As, id)
 
@@ -308,16 +362,22 @@ func (ctx *buildContext) processAction(step *stepBlock, pointer, parentID string
 	id := nodeID(step, pointer)
 	terminal := isExplicitTerminal(step)
 
+	var displayName string
+	if step.Provider != nil {
+		displayName = getProviderDisplayName(*step.Provider)
+	}
+
 	n := Node{
-		ID:         id,
-		Kind:       NodeAction,
-		Label:      labelOr(step.As, step.Name, "action"),
-		Pointer:    pointer,
-		IsTerminal: terminal,
-		Provider:   step.Provider,
-		StepAs:     step.As,
-		StepName:   step.Name,
-		ParentID:   parentID,
+		ID:                  id,
+		Kind:                NodeAction,
+		Label:               labelOr(step.As, step.Name, step.Keyword, "action"),
+		Pointer:             pointer,
+		IsTerminal:          terminal,
+		Provider:            step.Provider,
+		ProviderDisplayName: displayName,
+		StepAs:              step.As,
+		StepName:            step.Name,
+		ParentID:            parentID,
 	}
 	if terminal {
 		n.HTTPStatus = httpStatusFromInput(step.Input)
