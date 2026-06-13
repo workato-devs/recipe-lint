@@ -56,4 +56,9 @@ type ParsedRecipe struct {
 	Steps     []FlatStep
 	Config    []ConfigEntry
 	Providers []string // unique providers found in config
+
+	// stepIndex maps each step's JSON pointer to its index in Steps. Built
+	// once during Parse; backs the tree-ancestry lookups (Parent/Ancestors/
+	// Children) that structural rules and selector containment rely on.
+	stepIndex map[string]int
 }

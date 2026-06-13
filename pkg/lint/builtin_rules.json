@@ -160,6 +160,32 @@
       "assert": { "field_absent": { "path": "as" } }
     },
     {
+      "rule_id": "REPEAT_NO_PROVIDER",
+      "tier": 1,
+      "level": "warn",
+      "message": "\"repeat\" step should not have a provider",
+      "suggested_fix": "Remove the \"provider\" field from the repeat step — loop blocks carry no provider.",
+      "scope": "step",
+      "where": { "keyword": "repeat" },
+      "assert": { "field_absent": { "path": "provider" } }
+    },
+    {
+      "rule_id": "WHILE_CONDITION_NO_PROVIDER",
+      "tier": 1,
+      "level": "warn",
+      "message": "\"while_condition\" step should not have a provider, name, or alias",
+      "suggested_fix": "Remove the \"provider\", \"name\", and \"as\" fields from the while_condition step.",
+      "scope": "step",
+      "where": { "keyword": "while_condition" },
+      "assert": {
+        "all_of": [
+          { "field_absent": { "path": "provider" } },
+          { "field_absent": { "path": "name" } },
+          { "field_absent": { "path": "as" } }
+        ]
+      }
+    },
+    {
       "rule_id": "CATCH_HAS_RETRY",
       "tier": 1,
       "level": "info",
@@ -463,6 +489,24 @@
       "suggested_fix": "Move the else block to the last position within the if block.",
       "scope": "recipe",
       "assert": { "builtin": "check_else_last_in_if" }
+    },
+    {
+      "rule_id": "REPEAT_HAS_WHILE_CONDITION",
+      "tier": 2,
+      "level": "error",
+      "message": "\"repeat\" block must contain a \"while_condition\" child — without it the loop fails to reconstruct in the Workato UI after push",
+      "suggested_fix": "Add a \"while_condition\" step as the last child of the repeat block to define the loop exit condition.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_repeat_has_while_condition" }
+    },
+    {
+      "rule_id": "WHILE_CONDITION_LAST_IN_REPEAT",
+      "tier": 2,
+      "level": "error",
+      "message": "\"while_condition\" must be the last child in its repeat block",
+      "suggested_fix": "Move the while_condition step to the last position within the repeat block.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_while_condition_last_in_repeat" }
     },
     {
       "rule_id": "SUCCESS_BEFORE_CATCH",

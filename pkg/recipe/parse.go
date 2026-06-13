@@ -50,12 +50,19 @@ func Parse(data []byte) (*ParsedRecipe, error) {
 		providers = append(providers, p)
 	}
 
+	// Index steps by JSON pointer so tree-ancestry lookups are O(1).
+	stepIndex := make(map[string]int, len(steps))
+	for i := range steps {
+		stepIndex[steps[i].JSONPointer] = i
+	}
+
 	return &ParsedRecipe{
 		Raw:       raw,
 		Trigger:   trigger,
 		Steps:     steps,
 		Config:    config,
 		Providers: providers,
+		stepIndex: stepIndex,
 	}, nil
 }
 

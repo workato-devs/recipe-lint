@@ -1,0 +1,28 @@
+{
+  "name": "repeat-while-correct",
+  "version": 1, "private": false, "concurrency": 1,
+  "code": {
+    "number": 0, "provider": "clock", "name": "scheduled_event", "as": "trigger1",
+    "keyword": "trigger", "input": { "time_unit": "minutes", "trigger_every": "5" },
+    "block": [
+      {
+        "number": 1, "as": "page_loop", "keyword": "repeat",
+        "block": [
+          { "number": 2, "provider": "salesforce", "name": "search_sobjects_soql",
+            "as": "fetch_page", "keyword": "action", "input": {}, "uuid": "fetch-page-001" },
+          {
+            "number": 3, "keyword": "while_condition",
+            "input": { "type": "compound", "operand": "and", "conditions": [
+              { "operand": "present",
+                "lhs": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"salesforce\",\"line\":\"fetch_page\",\"path\":[\"next_records_url\"]}')}",
+                "rhs": "", "uuid": "cond-001" } ] },
+            "uuid": "while-cond-001"
+          }
+        ],
+        "uuid": "page-loop-001"
+      }
+    ],
+    "uuid": "trigger-001"
+  },
+  "config": [ { "keyword": "application", "name": "clock", "provider": "clock", "skip_validation": false, "account_id": null } ]
+}

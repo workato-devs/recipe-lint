@@ -75,7 +75,7 @@ func evalStepScope(parsed *recipe.ParsedRecipe, rule CustomRule) []LintDiagnosti
 	var diags []LintDiagnostic
 	for i := range parsed.Steps {
 		step := &parsed.Steps[i]
-		if rule.Where != nil && !matchesWhere(step, rule.Where) {
+		if rule.Where != nil && !matchesWhere(parsed, step, rule.Where) {
 			continue
 		}
 		if !evalAssertion(step, parsed, rule.Assert) {
@@ -170,7 +170,7 @@ func evalStepCount(parsed *recipe.ParsedRecipe, a *AssertStepCount) bool {
 	count := 0
 	for i := range parsed.Steps {
 		step := &parsed.Steps[i]
-		if a.Where != nil && !matchesWhere(step, a.Where) {
+		if a.Where != nil && !matchesWhere(parsed, step, a.Where) {
 			continue
 		}
 		count++
@@ -222,20 +222,47 @@ func evalEISFieldType(step *recipe.FlatStep, a *AssertEISFieldType) bool {
 	return false
 }
 
-// matchesWhere returns true if a step matches the selector criteria.
-func matchesWhere(step *recipe.FlatStep, where *StepSelector) bool {
+// matchesWhere returns true if a step matches the selector criteria, including
+// any "inside" containment clause (which is evaluated against the step's
+// ancestor block-owners via the recipe tree layer).
+func matchesWhere(parsed *recipe.ParsedRecipe, step *recipe.FlatStep, where *StepSelector) bool {
 	if where == nil {
 		return true
 	}
-	if len(where.Keyword) > 0 && !where.Keyword.Contains(step.Code.Keyword) {
+	if !matchesSelectorFields(step, where) {
 		return false
 	}
-	if len(where.Provider) > 0 {
-		if step.Code.Provider == nil || !where.Provider.Contains(*step.Code.Provider) {
+	if where.Inside != nil {
+		if parsed == nil {
+			return false
+		}
+		matched := false
+		for _, anc := range parsed.Ancestors(step) {
+			if matchesSelectorFields(anc, where.Inside) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
 			return false
 		}
 	}
-	if len(where.ActionName) > 0 && !where.ActionName.Contains(step.Code.Name) {
+	return true
+}
+
+// matchesSelectorFields matches a step's own keyword/provider/action_name
+// against a selector, ignoring any "inside" clause (AND across fields, OR
+// within a field).
+func matchesSelectorFields(step *recipe.FlatStep, sel *StepSelector) bool {
+	if len(sel.Keyword) > 0 && !sel.Keyword.Contains(step.Code.Keyword) {
+		return false
+	}
+	if len(sel.Provider) > 0 {
+		if step.Code.Provider == nil || !sel.Provider.Contains(*step.Code.Provider) {
+			return false
+		}
+	}
+	if len(sel.ActionName) > 0 && !sel.ActionName.Contains(step.Code.Name) {
 		return false
 	}
 	return true

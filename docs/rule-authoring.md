@@ -120,6 +120,8 @@ Rules where `standard` and `strict` differ are shown below. Rules not listed are
 | `CATCH_PROVIDER_NULL` | 1 | warn | **error** |
 | `CATCH_HAS_AS` | 1 | warn | **error** |
 | `TRY_NO_AS` | 1 | warn | **error** |
+| `REPEAT_NO_PROVIDER` | 1 | warn | **error** |
+| `WHILE_CONDITION_NO_PROVIDER` | 1 | warn | **error** |
 | `CATCH_HAS_RETRY` | 1 | info | **warn** |
 | `CONFIG_NO_WORKATO` | 1 | warn | **error** |
 | `CONFIG_PROVIDER_MATCH` | 1 | warn | **error** |
@@ -253,14 +255,40 @@ The `where` clause filters which steps a step-scoped rule applies to. All specif
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `keyword` | string or string[] | Step keyword: `"trigger"`, `"action"`, `"if"`, `"else"`, `"try"`, `"catch"` |
+| `keyword` | string or string[] | Step keyword: `"trigger"`, `"action"`, `"if"`, `"else"`, `"try"`, `"catch"`, `"repeat"`, `"while_condition"` |
 | `provider` | string or string[] | Provider name (e.g., `"salesforce"`, `"rest"`) |
 | `action_name` | string or string[] | Action name (e.g., `"search_sobjects"`) |
+| `inside` | step selector | Matches only if some ancestor block-owner step matches the nested selector — e.g. "an action inside a `repeat`". Transitive (a step in a loop nested in a `try` is inside both). Cannot itself contain `inside`. |
 
 Examples:
 - `{ "provider": "salesforce" }` — all Salesforce steps
 - `{ "keyword": ["action", "trigger"] }` — actions and triggers
 - `{ "provider": "salesforce", "action_name": "search_sobjects" }` — only Salesforce search
+- `{ "provider": "logger", "inside": { "keyword": ["repeat", "foreach"] } }` — logger steps inside a loop
+
+The `inside` clause lets you write containment-based governance rules. For
+example, a logger left inside a pagination loop bills one task per iteration —
+this rule flags it:
+
+```json
+{
+  "rule_id": "NO_LOGGER_IN_LOOP",
+  "tier": 1,
+  "level": "warn",
+  "message": "Logger step inside a loop — one task per iteration. Move logging outside the loop or log a summary after it.",
+  "scope": "recipe",
+  "assert": {
+    "step_count": {
+      "where": { "provider": "logger", "inside": { "keyword": ["repeat", "foreach"] } },
+      "max": 0
+    }
+  }
+}
+```
+
+The nested selector uses the same fields as the top-level selector
+(`keyword`, `provider`, `action_name`). `inside` may not be nested within
+another `inside` — doing so is rejected at load time as `CUSTOM_RULE_INVALID`.
 
 #### Assertion Matchers
 

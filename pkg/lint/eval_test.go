@@ -113,34 +113,34 @@ func TestResolveFieldPath_NilStep(t *testing.T) {
 
 func TestMatchesWhere_NilSelector(t *testing.T) {
 	step := &recipe.FlatStep{Code: recipe.Code{Keyword: "action"}}
-	if !matchesWhere(step, nil) {
+	if !matchesWhere(nil, step, nil) {
 		t.Error("nil selector should match everything")
 	}
 }
 
 func TestMatchesWhere_Keyword(t *testing.T) {
 	step := &recipe.FlatStep{Code: recipe.Code{Keyword: "action"}}
-	if !matchesWhere(step, &StepSelector{Keyword: StringOrArray{"action"}}) {
+	if !matchesWhere(nil, step, &StepSelector{Keyword: StringOrArray{"action"}}) {
 		t.Error("should match action keyword")
 	}
-	if matchesWhere(step, &StepSelector{Keyword: StringOrArray{"trigger"}}) {
+	if matchesWhere(nil, step, &StepSelector{Keyword: StringOrArray{"trigger"}}) {
 		t.Error("should not match trigger keyword")
 	}
 }
 
 func TestMatchesWhere_Provider(t *testing.T) {
 	step := &recipe.FlatStep{Code: recipe.Code{Provider: strPtr("salesforce")}}
-	if !matchesWhere(step, &StepSelector{Provider: StringOrArray{"salesforce"}}) {
+	if !matchesWhere(nil, step, &StepSelector{Provider: StringOrArray{"salesforce"}}) {
 		t.Error("should match salesforce")
 	}
-	if matchesWhere(step, &StepSelector{Provider: StringOrArray{"rest"}}) {
+	if matchesWhere(nil, step, &StepSelector{Provider: StringOrArray{"rest"}}) {
 		t.Error("should not match rest")
 	}
 }
 
 func TestMatchesWhere_ActionName(t *testing.T) {
 	step := &recipe.FlatStep{Code: recipe.Code{Name: "search_sobjects"}}
-	if !matchesWhere(step, &StepSelector{ActionName: StringOrArray{"search_sobjects"}}) {
+	if !matchesWhere(nil, step, &StepSelector{ActionName: StringOrArray{"search_sobjects"}}) {
 		t.Error("should match")
 	}
 }
@@ -151,7 +151,7 @@ func TestMatchesWhere_ArrayValues(t *testing.T) {
 		Keyword:  StringOrArray{"action", "trigger"},
 		Provider: StringOrArray{"salesforce", "rest"},
 	}
-	if !matchesWhere(step, sel) {
+	if !matchesWhere(nil, step, sel) {
 		t.Error("should match with array selectors")
 	}
 }
