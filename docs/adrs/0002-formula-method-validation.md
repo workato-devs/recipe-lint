@@ -1,7 +1,7 @@
 # Formula Method Validation
 
-**Author:** Zayne Turner
-**Status:** Implemented
+**Author(s):** Zayne Turner
+**Status:** Accepted
 **Date:** March 6, 2026
 **Implemented:** March 9, 2026
 **References:** ADR 0001 (Tiered Lint Architecture)

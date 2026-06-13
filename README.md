@@ -97,5 +97,5 @@ See the [Rule Authoring Guide](docs/rule-authoring.md) for the full matcher refe
 
 - [Rule Reference](docs/rule-reference.md) — every built-in rule ID, description, and default severity
 - [Rule Authoring Guide](docs/rule-authoring.md) — profiles, `.wklintrc.json` configuration, custom rule authoring
-- [Architecture Decisions](docs/adr/) — tiered architecture, formula validation, profile system design
+- [Architecture Decisions](docs/adrs/) — tiered architecture, formula validation, profile system design, and how we use ADRs
 - [Linter Workflow Guide](https://github.com/workato-devs/recipe-skills/blob/main/docs/cli-guidance.md) — skills + linter integration patterns
