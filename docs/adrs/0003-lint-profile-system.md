@@ -1,8 +1,9 @@
 # Lint Profile System
 
-**Author:** Zayne Turner
-**Status:** Implemented
+**Author(s):** Zayne Turner
+**Status:** Accepted
 **Date:** March 9, 2026
+**Implemented:** March 9, 2026
 **References:** ADR 0001 (Tiered Lint Architecture)
 
 ---

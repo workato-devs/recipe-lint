@@ -1,8 +1,14 @@
 # Recipe Linter: Tiered Validation for Workato Recipe JSON
 
-**Author:** Zayne Turner
-**Status:** Accepted — Fully Implemented (Tiers 0-3)
-**Date:** February 23, 2026 (original) · March 2, 2026 (amendments incorporated) · March 20, 2026 (IGM port + Tiers 2-3 implemented) · June 12, 2026 (Tier-2 structure/flow split + recipe tree-ancestry layer)
+**Author(s):** Zayne Turner, Claude [role: assistant; harness: Claude Code; model: Opus 4.8]
+**Status:** Accepted
+**Date:** February 23, 2026
+**Implemented:** March 20, 2026 (IGM port + Tiers 2-3)
+
+**Amendments:**
+- June 12, 2026 — Tier-2 structure/flow split; recipe tree-ancestry layer
+- March 20, 2026 — IGM port + Tiers 2-3 implemented
+- March 2, 2026 — early amendments incorporated
 
 ---
 

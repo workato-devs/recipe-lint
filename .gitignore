@@ -19,14 +19,16 @@ Thumbs.db
 # Environment & secrets                                                                                                                                                                           
 *.env
 
-# Agent tooling                                     
+# Agent tooling
+# Vendor-specific agent files stay local; the canonical, shared instructions
+# live in AGENTS.md (tracked). See docs/adrs and AGENTS.md.
 .claude/settings.local.json
 .cursor/
 .cursorrules
 .windsurf/
 .windsurfrules
 .aider*
-Claude.md
+CLAUDE.md
 
 # Test & dev artifacts
 *.test
