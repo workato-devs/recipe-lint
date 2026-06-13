@@ -564,8 +564,8 @@ func TestLintRunWithDirectory(t *testing.T) {
 	resp := handleRequest(RPCRequest{JSONRPC: "2.0", ID: float64(1), Method: "lint.run", Params: params})
 	result := lintRunResultFromResp(t, resp)
 
-	if len(result.Files) != 5 {
-		t.Errorf("expected 5 files from fixtures dir, got %d", len(result.Files))
+	if len(result.Files) != 6 {
+		t.Errorf("expected 6 files from fixtures dir, got %d", len(result.Files))
 		for _, f := range result.Files {
 			t.Logf("  file: %s", f.File)
 		}
@@ -581,8 +581,8 @@ func TestLintRunWithMixedFileAndDirectory(t *testing.T) {
 	resp := handleRequest(RPCRequest{JSONRPC: "2.0", ID: float64(1), Method: "lint.run", Params: params})
 	result := lintRunResultFromResp(t, resp)
 
-	if len(result.Files) != 6 {
-		t.Errorf("expected 6 files (1 explicit + 5 from dir), got %d", len(result.Files))
+	if len(result.Files) != 7 {
+		t.Errorf("expected 7 files (1 explicit + 6 from dir), got %d", len(result.Files))
 		for _, f := range result.Files {
 			t.Logf("  file: %s", f.File)
 		}

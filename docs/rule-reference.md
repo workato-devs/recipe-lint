@@ -40,6 +40,8 @@ Checks each step for internal correctness without needing to know about other st
 | `CATCH_HAS_AS` | `"catch"` steps must have a non-empty `"as"` field | warn |
 | `CATCH_HAS_RETRY` | `"catch"` step input should include `max_retry_count` | info |
 | `TRY_NO_AS` | `"try"` steps should have an empty `"as"` field | warn |
+| `REPEAT_NO_PROVIDER` | `"repeat"` (loop) steps should not have a `provider` field | warn |
+| `WHILE_CONDITION_NO_PROVIDER` | `"while_condition"` steps should not have a `provider`, `name`, or `as` field | warn |
 | `NO_ELSIF` | `"elsif"` keyword is not allowed; use nested if/else instead | error |
 | `ACTION_NAME_VALID` | Action `name` must be in the allowed set for its `provider` (via connector `lint-rules.json`) | error |
 | `RESPONSE_CODES_DEFINED` | API platform triggers should define response codes in input | info |
@@ -81,6 +83,8 @@ Checks relationships between steps by building a control flow graph of the recip
 |---------|-------------|---------|
 | `CATCH_LAST_IN_TRY` | Catch block must be the last child in its try block | error |
 | `ELSE_LAST_IN_IF` | Else block must be the last child in its if block | error |
+| `REPEAT_HAS_WHILE_CONDITION` | Every `repeat` block must contain a `while_condition` child (its absence silently fails UI reconstruction after push) | error |
+| `WHILE_CONDITION_LAST_IN_REPEAT` | `while_condition` must be the last child in its repeat block | error |
 | `SUCCESS_BEFORE_CATCH` | Success `return_response` should be in the try body, not in catch | warn |
 | `TERMINAL_COVERAGE` | Every HTTP status code declared in trigger responses must have a `return_response` | warn |
 | `ALL_PATHS_RETURN` | Every control flow path must terminate with a `return_response` | warn |

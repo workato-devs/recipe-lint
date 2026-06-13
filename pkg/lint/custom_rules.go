@@ -22,10 +22,15 @@ type CustomRule struct {
 }
 
 // StepSelector filters which steps a step-scoped rule applies to.
+// Keyword/Provider/ActionName match the step's own properties (OR within a
+// field, AND across fields). Inside additionally requires that some ancestor
+// block-owner step match the nested selector — e.g. "an action inside a
+// repeat". Inside is capped at one level (no inside-within-inside).
 type StepSelector struct {
 	Keyword    StringOrArray `json:"keyword,omitempty"`
 	Provider   StringOrArray `json:"provider,omitempty"`
 	ActionName StringOrArray `json:"action_name,omitempty"`
+	Inside     *StepSelector `json:"inside,omitempty"`
 }
 
 // Assertion is a composable matcher. Exactly one field should be populated.
@@ -117,7 +122,22 @@ func validateCustomRule(r CustomRule) error {
 	if r.Level != LevelError && r.Level != LevelWarn && r.Level != LevelInfo {
 		return fmt.Errorf("level must be \"error\", \"warn\", or \"info\"")
 	}
+	if err := validateStepSelector(r.Where, "where"); err != nil {
+		return err
+	}
 	return validateAssertion(r.Assert)
+}
+
+// validateStepSelector enforces selector constraints. Currently it caps the
+// "inside" containment clause at one level — inside-within-inside is rejected.
+func validateStepSelector(sel *StepSelector, ctx string) error {
+	if sel == nil || sel.Inside == nil {
+		return nil
+	}
+	if sel.Inside.Inside != nil {
+		return fmt.Errorf("%s: \"inside\" cannot be nested within \"inside\"", ctx)
+	}
+	return nil
 }
 
 func validateAssertion(a Assertion) error {
@@ -136,6 +156,9 @@ func validateAssertion(a Assertion) error {
 	}
 	if a.StepCount != nil {
 		count++
+		if err := validateStepSelector(a.StepCount.Where, "step_count.where"); err != nil {
+			return err
+		}
 	}
 	if a.EISEmpty != nil {
 		count++

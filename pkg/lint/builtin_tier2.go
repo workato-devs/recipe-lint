@@ -2,17 +2,31 @@ package lint
 
 func init() {
 	RegisterBuiltin("check_catch_last_in_try", func(ctx *BuiltinContext, rule *CustomRule) []LintDiagnostic {
-		if ctx.Graph == nil {
+		if ctx.Parsed == nil {
 			return nil
 		}
-		return checkCatchLastInTry(ctx.Graph)
+		return checkCatchLastInTry(ctx.Parsed)
 	})
 
 	RegisterBuiltin("check_else_last_in_if", func(ctx *BuiltinContext, rule *CustomRule) []LintDiagnostic {
-		if ctx.Graph == nil {
+		if ctx.Parsed == nil {
 			return nil
 		}
-		return checkElseLastInIf(ctx.Graph)
+		return checkElseLastInIf(ctx.Parsed)
+	})
+
+	RegisterBuiltin("check_repeat_has_while_condition", func(ctx *BuiltinContext, rule *CustomRule) []LintDiagnostic {
+		if ctx.Parsed == nil {
+			return nil
+		}
+		return checkRepeatHasWhileCondition(ctx.Parsed, rule.Message)
+	})
+
+	RegisterBuiltin("check_while_condition_last_in_repeat", func(ctx *BuiltinContext, rule *CustomRule) []LintDiagnostic {
+		if ctx.Parsed == nil {
+			return nil
+		}
+		return checkWhileConditionLastInRepeat(ctx.Parsed, rule.Message)
 	})
 
 	RegisterBuiltin("check_success_before_catch", func(ctx *BuiltinContext, rule *CustomRule) []LintDiagnostic {

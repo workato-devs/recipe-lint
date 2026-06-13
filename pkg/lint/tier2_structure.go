@@ -9,93 +9,46 @@ import (
 	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
 )
 
-// checkCatchLastInTry verifies that a catch block is the last child in its parent try block.
+// checkCatchLastInTry verifies that a catch block is the last child in its
+// parent try block. Runs on the recipe tree layer (block containment is a
+// syntactic question), consistent with the loop checks in tier2_loops.go.
 // Rule: CATCH_LAST_IN_TRY
-func checkCatchLastInTry(graph *igm.Graph) []LintDiagnostic {
-	var diags []LintDiagnostic
-
-	for _, node := range graph.Nodes {
-		if node.Kind != igm.NodeTry {
-			continue
-		}
-
-		// Get the raw block from the recipe to check ordering.
-		// We check via the graph: the catch node's pointer index should be
-		// the last element in the parent's block array.
-		children := graph.Children(node.ID)
-		var catchNode *igm.Node
-		maxActionPointerIdx := -1
-
-		for i := range children {
-			if children[i].Kind == igm.NodeCatch {
-				catchNode = &children[i]
-			}
-			if children[i].Kind == igm.NodeAction {
-				idx := pointerLastIndex(children[i].Pointer)
-				if idx > maxActionPointerIdx {
-					maxActionPointerIdx = idx
-				}
-			}
-		}
-
-		if catchNode == nil {
-			continue
-		}
-
-		catchIdx := pointerLastIndex(catchNode.Pointer)
-		if catchIdx >= 0 && maxActionPointerIdx >= 0 && catchIdx < maxActionPointerIdx {
-			diags = append(diags, LintDiagnostic{
-				Level:   LevelError,
-				Message: "Catch block must be the last child in its try block",
-				Source:  &SourceRef{JSONPointer: catchNode.Pointer},
-				RuleID:  "CATCH_LAST_IN_TRY",
-				Tier:    2,
-			})
-		}
-	}
-	return diags
+func checkCatchLastInTry(parsed *recipe.ParsedRecipe) []LintDiagnostic {
+	return checkChildLastInParent(parsed, "try", "catch",
+		"Catch block must be the last child in its try block", "CATCH_LAST_IN_TRY")
 }
 
-// checkElseLastInIf verifies that an else block is the last child in its parent if block.
+// checkElseLastInIf verifies that an else block is the last child in its parent
+// if block.
 // Rule: ELSE_LAST_IN_IF
-func checkElseLastInIf(graph *igm.Graph) []LintDiagnostic {
+func checkElseLastInIf(parsed *recipe.ParsedRecipe) []LintDiagnostic {
+	return checkChildLastInParent(parsed, "if", "else",
+		"Else block must be the last child in its if block", "ELSE_LAST_IN_IF")
+}
+
+// checkChildLastInParent flags any step with keyword childKeyword that is not
+// the last child of its parentKeyword block.
+func checkChildLastInParent(parsed *recipe.ParsedRecipe, parentKeyword, childKeyword, message, ruleID string) []LintDiagnostic {
 	var diags []LintDiagnostic
-
-	for _, node := range graph.Nodes {
-		if node.Kind != igm.NodeIf {
+	for i := range parsed.Steps {
+		step := &parsed.Steps[i]
+		if step.Code.Keyword != parentKeyword {
 			continue
 		}
-
-		children := graph.Children(node.ID)
-		var elseBranch *igm.Node
-		maxActionPointerIdx := -1
-
-		for i := range children {
-			// The else branch is represented as a "branch" node with label "Else"
-			if children[i].Kind == igm.NodeBranch && children[i].Label == "Else" {
-				elseBranch = &children[i]
+		children := parsed.Children(step)
+		for j := range children {
+			if children[j].Code.Keyword != childKeyword {
+				continue
 			}
-			if children[i].Kind == igm.NodeAction {
-				idx := pointerLastIndex(children[i].Pointer)
-				if idx > maxActionPointerIdx {
-					maxActionPointerIdx = idx
-				}
+			if j != len(children)-1 {
+				diags = append(diags, LintDiagnostic{
+					Level:   LevelError,
+					Message: message,
+					Source:  &SourceRef{JSONPointer: children[j].JSONPointer},
+					RuleID:  ruleID,
+					Tier:    2,
+				})
 			}
-		}
-
-		if elseBranch == nil {
-			continue
-		}
-
-		elseIdx := pointerLastIndex(elseBranch.Pointer)
-		if elseIdx >= 0 && maxActionPointerIdx >= 0 && elseIdx < maxActionPointerIdx {
-			diags = append(diags, LintDiagnostic{
-				Level:   LevelError,
-				Message: "Else block must be the last child in its if block",
-				Source:  &SourceRef{JSONPointer: elseBranch.Pointer},
-				RuleID:  "ELSE_LAST_IN_IF",
-				Tier:    2,
-			})
 		}
 	}
 	return diags
@@ -529,16 +482,3 @@ func allDescendantIDs(graph *igm.Graph, rootID string) map[string]bool {
 	return result
 }
 
-// pointerLastIndex extracts the last numeric segment from a JSON pointer.
-func pointerLastIndex(pointer string) int {
-	parts := strings.Split(pointer, "/")
-	if len(parts) == 0 {
-		return -1
-	}
-	last := parts[len(parts)-1]
-	var n int
-	if _, err := fmt.Sscanf(last, "%d", &n); err != nil {
-		return -1
-	}
-	return n
-}

@@ -2,7 +2,7 @@
 
 **Author:** Zayne Turner
 **Status:** Accepted — Fully Implemented (Tiers 0-3)
-**Date:** February 23, 2026 (original) · March 2, 2026 (amendments incorporated) · March 20, 2026 (IGM port + Tiers 2-3 implemented)
+**Date:** February 23, 2026 (original) · March 2, 2026 (amendments incorporated) · March 20, 2026 (IGM port + Tiers 2-3 implemented) · June 12, 2026 (Tier-2 structure/flow split + recipe tree-ancestry layer)
 
 ---
 
@@ -233,6 +233,43 @@ The connector-internal exception list is loaded from JSON data files in the skil
 
 ### Tier 2: Inter-Step Structure (requires IGM)
 
+> **Amendment (June 2026): Tier 2 is served by two mechanisms, not just the IGM.**
+> The original framing below — "requires IGM," "Tool: Go IGM graph assertions" — conflated
+> two different questions that are both inter-step but are not the same kind of question:
+>
+> - **Syntactic structure** — block containment, child ordering, ancestry ("is `catch` the
+>   last child of its `try`?", "does this `repeat` contain a `while_condition`?"). These are
+>   *tree* questions. They run on the **recipe tree-ancestry layer** (`pkg/recipe`:
+>   `Parent`/`Ancestors`/`Children`/`StepByPointer`, derived from each step's JSON pointer),
+>   with **no IGM dependency** — so they still run when the graph build fails, and they share
+>   the exact mechanism the custom-rule `inside` selector uses.
+> - **Control flow** — reachable paths, terminal coverage, path termination
+>   (`ALL_PATHS_RETURN`, `TERMINAL_COVERAGE`, `SUCCESS_BEFORE_CATCH`, `CATCH_RETURNS_ALL_FIELDS`).
+>   These genuinely need execution semantics and consume the **IGM graph**.
+>
+> **Selection rule for new Tier-2 rules:** containment / ordering / ancestry → tree layer;
+> execution-flow → IGM. Reach for the graph only when the question is about how the recipe
+> *runs*, not how it is *nested*. The original "Tool: IGM graph assertions" line should be
+> read as applying to the control-flow rules only.
+>
+> **Why this matters (concrete evidence).** `CATCH_LAST_IN_TRY` and `ELSE_LAST_IN_IF` were
+> originally built on the graph and **never fired**: they inspected the if/try node's direct
+> graph children, which are branch-wrapper nodes (never `NodeAction`), so the ordering
+> comparison could not trigger. Recovering block order from the graph required pointer
+> arithmetic (`pointerLastIndex`) layered back on top of the graph — a tell that these were
+> tree questions wearing a control-flow hat. Migrating them to the tree layer both deleted
+> that pointer arithmetic and repaired the latent bug.
+>
+> **Loop consequence (deliberate deferral).** The IGM does **not** model loop control flow —
+> `repeat`/`while_condition` are flattened to a generic action and the loop body is not
+> recursed. Modeling loop control flow (back/exit edges, loop-aware `ALL_PATHS_RETURN`,
+> infinite-loop detection) is intentionally deferred future work. Until it exists, loop
+> *structural* rules (`REPEAT_HAS_WHILE_CONDITION`, `WHILE_CONDITION_LAST_IN_REPEAT`, plus the
+> Tier-1 `REPEAT_NO_PROVIDER` / `WHILE_CONDITION_NO_PROVIDER`) live on the tree layer
+> (`pkg/lint/tier2_loops.go`), and loop *control-flow* rules do not exist yet. This was a
+> conscious scope decision: the reported loop bug (#13) is a structural malformation, so it
+> did not require taking on loop control-flow semantics to fix.
+
 **What it checks:** Are the relationships between steps correct?
 
 **Tool:** Go IGM graph assertions. Generate the IGM via `pkg/igm/`, then run rules against the node/edge structure.
@@ -248,6 +285,14 @@ The connector-internal exception list is loaded from JSON data files in the skil
 | `ALL_PATHS_RETURN` | For API endpoint recipes, every control flow path terminates in a `return_response` (no dangling paths) | SKILL_INSTRUCTIONS |
 | `CATCH_RETURNS_ALL_FIELDS` | Catch block `return_response` provides values for all fields defined in trigger response schema (using `=null` for unavailable) | base validation-checklist |
 | `RECIPE_CALL_ZIP_NAME` | Recipe function `call` actions include `zip_name` in `flow_id` | SKILL_INSTRUCTIONS |
+
+> **Amendment (June 2026):** Per the structure/flow split above, the two structural rules in
+> this table — `CATCH_LAST_IN_TRY` and `ELSE_LAST_IN_IF` — now run on the recipe tree layer,
+> not the graph. Two loop structural rules were added on the same layer:
+> `REPEAT_HAS_WHILE_CONDITION` (every `repeat` block must contain a `while_condition` child —
+> its absence silently fails UI reconstruction after push) and `WHILE_CONDITION_LAST_IN_REPEAT`.
+> The remaining rules in this table are control-flow rules and stay on the IGM. See
+> `docs/rule-reference.md` for the live catalog.
 
 **Implementation sketch — IGM-based rules:**
 
@@ -839,6 +884,15 @@ Future:   Additional matcher primitives based on beta feedback
           External Go plugins for matchers that can't be expressed declaratively
 ```
 
+> **Amendment (June 2026):** The first containment matcher, the `inside` step-selector clause
+> (#14 — "a logger inside a `repeat`"), turned out to be a **tree-level, Tier-1-evaluable**
+> matcher, not the "graph-level assertion" this path anticipated. It matches a step against its
+> ancestor block-owners via the recipe tree-ancestry layer, so it needs no IGM and works in
+> both rule-level `where` and `step_count.where`. It is capped at one level of nesting
+> (`inside` within `inside` is rejected at load as `CUSTOM_RULE_INVALID`). This reinforces the
+> structure/flow split: containment is a tree question, so its matcher lives at the tree layer,
+> not the graph.
+
 ---
 
 ## Relationship to IGM
@@ -854,7 +908,7 @@ The linter is **not** a replacement for the IGM transformer. They have different
 | Connector-specific rules | No | Yes (via JSON rule files) |
 | Schema comparison (EIS) | No | Yes |
 
-Tiers 0 and 1 run independently of the IGM — no transformer dependency, fast, available immediately. Tiers 2 and 3 consume the Go IGM graph as input, available after the transformer is ported.
+Tiers 0 and 1 run independently of the IGM — no transformer dependency, fast, available immediately. Tier 3 and the *control-flow* rules of Tier 2 consume the Go IGM graph as input, available after the transformer is ported. The *structural* rules of Tier 2 (containment, ordering, ancestry) consume the recipe tree-ancestry layer instead and carry no IGM dependency — see the June 2026 amendment under "Tier 2: Inter-Step Structure."
 
 ---
 

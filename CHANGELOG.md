@@ -5,6 +5,30 @@ All notable changes to the recipe-lint plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Loop structural validation for `repeat`/`while_condition` (#13): `REPEAT_NO_PROVIDER`
+  and `WHILE_CONDITION_NO_PROVIDER` (Tier 1), `REPEAT_HAS_WHILE_CONDITION` and
+  `WHILE_CONDITION_LAST_IN_REPEAT` (Tier 2). A malformed loop missing its
+  `while_condition` child — which silently fails UI reconstruction after push —
+  is now caught.
+- `inside` containment clause for custom-rule step selectors (#14): match a step
+  by where it sits in the recipe tree (e.g. `{ "provider": "logger", "inside":
+  { "keyword": "repeat" } }`). Works in both rule-level `where` and
+  `step_count.where`. Capped at one level; nested `inside` is rejected as
+  `CUSTOM_RULE_INVALID`.
+- Recipe tree-ancestry layer (`pkg/recipe`): `Parent`/`Ancestors`/`Children`/
+  `StepByPointer` lookups derived from step JSON pointers, shared by the loop
+  structural checks and the `inside` selector.
+
+### Fixed
+
+- `CATCH_LAST_IN_TRY` and `ELSE_LAST_IN_IF` previously never fired because the
+  IGM-based implementation inspected the wrong graph children. They were migrated
+  to the recipe tree layer and now correctly flag out-of-order catch/else blocks.
+
 ## [0.1.0] -- 2026-04-13
 
 ### Added

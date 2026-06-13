@@ -17,10 +17,11 @@ Use a builtin when the rule requires:
 | File | Purpose |
 |------|---------|
 | `pkg/lint/builtin_tier1.go` | Tier 1 builtin registrations and implementations |
-| `pkg/lint/builtin_tier2.go` | Tier 2 builtin registrations (requires IGM graph) |
+| `pkg/lint/builtin_tier2.go` | Tier 2 builtin registrations (control-flow checks use the IGM graph; structural/containment checks use the recipe tree layer) |
 | `pkg/lint/builtin_tier3.go` | Tier 3 builtin registrations (requires IGM graph + alias map) |
 | `pkg/lint/tier1_*.go` | Tier 1 implementation files grouped by concern (steps, datapills, EIS, formulas) |
-| `pkg/lint/tier2_structure.go` | Tier 2 control flow analysis |
+| `pkg/lint/tier2_structure.go` | Tier 2 structural checks (if/try block containment) on the recipe tree layer |
+| `pkg/lint/tier2_loops.go` | Tier 2 loop structural checks (repeat/while_condition) on the recipe tree layer |
 | `pkg/lint/tier3_dataflow.go` | Tier 3 cross-step data flow analysis |
 | `pkg/lint/builtin_rules.json` | JSON catalog — every rule (builtin or declarative) must have an entry here |
 
@@ -152,7 +153,8 @@ Each diagnostic must set its own `RuleID` so the filter works. The engine only s
 
 ## Tier 2-3 builtins
 
-Tier 2-3 builtins require the IGM graph. Check for nil before using it:
+Tier 2-3 builtins that reason about **control flow** (reachable paths, terminal
+coverage, edges) require the IGM graph. Check for nil before using it:
 
 ```go
 func checkMyGraphRule(ctx *BuiltinContext) []LintDiagnostic {
@@ -164,3 +166,30 @@ func checkMyGraphRule(ctx *BuiltinContext) []LintDiagnostic {
 ```
 
 The graph is only built when Tier 2 or 3 is requested. If the graph build fails, your function won't be called (the context's Graph field will be nil and the tier is skipped).
+
+### Structural vs. control-flow checks
+
+Not every Tier-2 check needs the graph. **Structural** questions — block
+containment, child ordering, ancestry ("is the `catch` the last child of its
+`try`?", "does this `repeat` contain a `while_condition`?") — are syntactic, not
+control-flow, and run on the recipe tree layer instead:
+
+```go
+func checkMyStructuralRule(ctx *BuiltinContext) []LintDiagnostic {
+    if ctx.Parsed == nil {
+        return nil
+    }
+    for i := range ctx.Parsed.Steps {
+        step := &ctx.Parsed.Steps[i]
+        // ctx.Parsed.Children(step), ctx.Parsed.Parent(step),
+        // ctx.Parsed.Ancestors(step) recover tree relationships from JSON pointers.
+    }
+}
+```
+
+Prefer the tree layer for containment/ordering checks: it has no IGM dependency
+(so it still runs if the graph build fails) and it's the same mechanism the
+custom-rule `inside` selector uses. Reserve the graph for genuine control-flow
+analysis. The IGM does **not** model loop control flow (`repeat`/`while_condition`
+are flattened), which is another reason loop structural checks live on the tree
+layer.
