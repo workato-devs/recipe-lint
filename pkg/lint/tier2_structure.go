@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/igm"
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/igm"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 // checkCatchLastInTry verifies that a catch block is the last child in its

@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 func ruleIDs(diags []LintDiagnostic) map[string]bool {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 func init() {

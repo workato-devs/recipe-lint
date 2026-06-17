@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/workato-devs/wk-lint-beta/profiles"
+	"github.com/workato-devs/recipe-lint/profiles"
 )
 
 func loadEmbeddedProfiles() (map[string]*ProfileDef, error) {

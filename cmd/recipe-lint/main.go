@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/lint"
+	"github.com/workato-devs/recipe-lint/pkg/lint"
 )
 
 var (

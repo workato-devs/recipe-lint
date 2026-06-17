@@ -8,7 +8,7 @@ before:
   - go mod verify
 
 builds:
-  - id: wk-lint
+  - id: recipe-lint
     main: ./cmd/recipe-lint
     binary: recipe-lint
     env:

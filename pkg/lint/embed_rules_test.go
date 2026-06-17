@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 func evalBuiltinRulesForTest(t *testing.T, parsed *recipe.ParsedRecipe) []LintDiagnostic {

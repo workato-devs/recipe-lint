@@ -1,6 +1,6 @@
 package lint
 
-import "github.com/workato-devs/wk-lint-beta/pkg/recipe"
+import "github.com/workato-devs/recipe-lint/pkg/recipe"
 
 // Loop structural checks. Unlike the if/try checks in tier2_structure.go, these
 // run on the recipe tree-ancestry layer (parsed.Children) rather than the IGM

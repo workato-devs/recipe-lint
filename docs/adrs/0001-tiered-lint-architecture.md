@@ -6,6 +6,7 @@
 **Implemented:** March 20, 2026 (IGM port + Tiers 2-3)
 
 **Amendments:**
+- June 16, 2026 — Linter split into standalone `recipe-lint` repo; "Where Things Live" layout corrected
 - June 12, 2026 — Tier-2 structure/flow split; recipe tree-ancestry layer
 - March 20, 2026 — IGM port + Tiers 2-3 implemented
 - March 2, 2026 — early amendments incorporated
@@ -78,7 +79,7 @@ Every `wk lint` invocation spawns the plugin binary (~10-20ms Go process startup
 
 ### Installation and distribution
 
-Pre-built binaries are published to [GitHub Releases](https://github.com/workato-devs/wk-lint-beta/releases) via GoReleaser for macOS, Linux, and Windows (x86_64 and ARM64). Users download an archive, place the `recipe-lint` binary on their PATH, and register it with `wk plugins install recipe-lint`. No Go toolchain required.
+Pre-built binaries are published to [GitHub Releases](https://github.com/workato-devs/recipe-lint/releases) via GoReleaser for macOS, Linux, and Windows (x86_64 and ARM64). Users download an archive, place the `recipe-lint` binary on their PATH, and register it with `wk plugins install recipe-lint`. No Go toolchain required.
 
 ---
 
@@ -601,8 +602,17 @@ When `--skip-lint` is used on `wk push`, emit a `[debug]` line (visible with `--
 
 ## Where Things Live
 
+> **Amendment (June 2026): the linter now ships as its own standalone `recipe-lint`
+> repository, not a subtree of the `wk` CLI monorepo.** The layout below reflects the
+> original plan to develop the linter inside the `wk` CLI repo. It has since been split
+> into a dedicated repository (`recipe-lint`), so the paths are rooted at the repo itself
+> rather than under `wk/`: `cmd/recipe-lint/` holds the JSON-RPC plugin binary (there is
+> no `plugins/` or `internal/plugin/` directory here), and `pkg/lint/`, `pkg/igm/`,
+> `pkg/recipe/`, and `profiles/` sit at the top level. The original tree is preserved
+> below for historical context.
+
 ```
-wk-cli-beta/
+wk/
 ├── pkg/
 │   ├── lint/
 │   │   ├── lint.go                  # Orchestrator: LintRecipe() entry point
@@ -641,12 +651,12 @@ wk-cli-beta/
 
 | Artifact | Location | Language | Reason |
 |----------|----------|----------|--------|
-| Linter core (Tiers 0-1) | `wk-cli-beta/pkg/lint/` | Go | Importable library, used by plugin binary |
-| Linter structure rules (Tier 2) | `wk-cli-beta/pkg/lint/` | Go | Consumes Go IGM, same library |
-| Linter data flow rules (Tier 3) | `wk-cli-beta/pkg/lint/` | Go | Consumes Go IGM alias map, same library |
-| Plugin binary | `wk-cli-beta/plugins/recipe-lint/` | Go | JSON-RPC server, imports `pkg/lint` |
+| Linter core (Tiers 0-1) | `wk/pkg/lint/` | Go | Importable library, used by plugin binary |
+| Linter structure rules (Tier 2) | `wk/pkg/lint/` | Go | Consumes Go IGM, same library |
+| Linter data flow rules (Tier 3) | `wk/pkg/lint/` | Go | Consumes Go IGM alias map, same library |
+| Plugin binary | `wk/plugins/recipe-lint/` | Go | JSON-RPC server, imports `pkg/lint` |
 | Plugin manifest | `plugins/recipe-lint/plugin.toml` | TOML | Declares commands + hooks |
-| IGM transformer (Go port) | `wk-cli-beta/pkg/igm/` | Go | Linter Tiers 2-3 + future `wk igm` command |
+| IGM transformer (Go port) | `wk/pkg/igm/` | Go | Linter Tiers 2-3 + future `wk igm` command |
 | IGM transformer (original) | VS Code extension repo `core/` | TypeScript | VS Code extension visualization |
 | Connector-specific rule data | `recipe-skills/skills/*/` | JSON | Loaded by Go linter at runtime |
 | Prose validation checklists | `recipe-skills/skills/*/` | Markdown | Human documentation (not executed) |
