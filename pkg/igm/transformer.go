@@ -7,6 +7,10 @@ import (
 
 // Transform converts raw recipe JSON bytes into an IGM graph.
 // This is the Go port of the TypeScript IGM transformer, simplified for linter use.
+//
+// The IGM graph powers tier 2-3 control-flow analysis described in ADR-0001
+// (docs/adrs/0001-tiered-lint-architecture.md). If you change the graph's node/
+// edge model or what tiers depend on it, amend that ADR in the same PR.
 func Transform(data []byte) (*Graph, error) {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(data, &raw); err != nil {

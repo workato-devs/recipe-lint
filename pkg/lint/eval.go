@@ -93,6 +93,12 @@ func evalStepScope(parsed *recipe.ParsedRecipe, rule CustomRule) []LintDiagnosti
 }
 
 // evalAssertion returns true if the assertion passes.
+//
+// This declarative assertion vocabulary is the canonical "rules are data" path
+// of ADR-0004 (docs/adrs/0004-rules-are-data.md): any rule expressible here runs
+// as data with no new binary, meeting the original PRD bar. The builtin escape
+// hatch (builtin_registry.go) is the documented exception. If you add or change
+// assertion types here, amend ADR-0004 in the same PR.
 func evalAssertion(step *recipe.FlatStep, parsed *recipe.ParsedRecipe, a Assertion) bool {
 	switch {
 	case a.FieldExists != nil:

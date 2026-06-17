@@ -1,6 +1,8 @@
 # Recipe Linter: Tiered Validation for Workato Recipe JSON
 
-**Author(s):** Zayne Turner, Claude [role: assistant; harness: Claude Code; model: Opus 4.8]
+**Author(s):** Zayne Turner, Claude [role: assistant; harness: Claude Code]
+**Amended-by:** Claude [role: assistant; harness: Claude Code; model: Opus 4.8], dir. Zayne Turner — June 2026
+**Amended-by:** Claude [role: assistant; harness: Claude Code], dir. Zayne Turner — March 2026
 **Status:** Accepted
 **Date:** February 23, 2026
 **Implemented:** March 20, 2026 (IGM port + Tiers 2-3)

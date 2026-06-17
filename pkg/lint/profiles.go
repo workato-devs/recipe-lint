@@ -95,6 +95,10 @@ func loadProfilesFromDir(dir string, into map[string]*ProfileDef) error {
 // resolveProfileChain walks the inheritance chain for the named profile,
 // merging rules from ancestor to descendant (child overrides parent).
 // Detects cycles and enforces a maximum depth of 5.
+//
+// Profile resolution and `extends` inheritance implement ADR-0003
+// (docs/adrs/0003-lint-profile-system.md). If you change inheritance or merge
+// semantics, amend that ADR in the same PR.
 func resolveProfileChain(name string, discovered map[string]*ProfileDef) (*ResolvedProfile, error) {
 	// Walk the chain to collect profiles from child to root
 	var chain []string

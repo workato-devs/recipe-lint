@@ -30,6 +30,14 @@ func (c *BuiltinContext) CacheGetOrCompute(key string, compute func() interface{
 // BuiltinFunc is a registered Go function backing a builtin assertion.
 // It returns zero or more diagnostics with Message and Source filled in.
 // The engine stamps RuleID, Level, and Tier from the JSON rule definition.
+//
+// This builtin escape hatch is the exception to the "rules are data" principle
+// in ADR-0004 (docs/adrs/0004-rules-are-data.md): every rule has a JSON
+// definition, and only logic the declarative vocabulary can't yet express
+// delegates to a registered Go function. Each builtin added here is a rule that
+// requires cutting a new binary — debt against the PRD bar that ADR documents.
+// If you change how builtins are registered or dispatched, or grow this set,
+// amend ADR-0004 in the same PR.
 type BuiltinFunc func(ctx *BuiltinContext, rule *CustomRule) []LintDiagnostic
 
 var builtinRegistry = map[string]BuiltinFunc{}
