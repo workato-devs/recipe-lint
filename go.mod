@@ -1,3 +1,3 @@
-module github.com/workato-devs/wk-lint-beta
+module github.com/workato-devs/recipe-lint
 
 go 1.23

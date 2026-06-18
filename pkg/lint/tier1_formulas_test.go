@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 // --- Group A: Tokenizer (extractMethods) tests ---

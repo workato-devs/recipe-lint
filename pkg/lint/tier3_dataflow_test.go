@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/igm"
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/igm"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 func evalTier3BuiltinForTest(t *testing.T, parsed *recipe.ParsedRecipe, graph *igm.Graph) []LintDiagnostic {

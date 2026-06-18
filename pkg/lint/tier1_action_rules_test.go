@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 func sfStepWithInput(name string, input json.RawMessage) recipe.FlatStep {

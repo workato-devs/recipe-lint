@@ -1,5 +1,5 @@
-# Drop this into .github/workflows/ in both wk-cli-beta and wk-lint-beta.
-# Set TOOL_NAME and TOOL_REPO to match each repo (see env block below).
+# Sibling files live under .github/workflows/ in both wk and recipe-lint.
+# Vars TOOL_NAME and TOOL_REPO to match each repo (see env block below).
 # Required secret: TAP_GITHUB_TOKEN — a PAT with write access to homebrew-tap and scoop-bucket repos.
 
 name: Update Homebrew & Scoop on release
@@ -15,9 +15,9 @@ on:
         required: true
 
 env:
-  # For wk-lint-beta:
+  # For recipe-lint:
   TOOL_NAME: recipe-lint
-  TOOL_REPO: workato-devs/wk-lint-beta
+  TOOL_REPO: workato-devs/recipe-lint
 
 jobs:
   update-package-managers:

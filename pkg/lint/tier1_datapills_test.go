@@ -3,7 +3,7 @@ package lint
 import (
 	"testing"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 func TestExtractDatapills_ValidJSON(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 func TestEIS_MIRRORS_INPUT_Warn(t *testing.T) {

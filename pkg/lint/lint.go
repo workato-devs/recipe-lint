@@ -3,8 +3,8 @@ package lint
 import (
 	"path/filepath"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/igm"
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/igm"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 // LintOptions configures a lint run.
@@ -18,6 +18,10 @@ type LintOptions struct {
 }
 
 // LintRecipe lints raw recipe JSON bytes and returns diagnostics.
+//
+// The tiered pipeline below (Tier 0 schema → parse → load rules → Tiers 1-3 →
+// overrides) implements ADR-0001 (docs/adrs/0001-tiered-lint-architecture.md).
+// If you change tier ordering or semantics, amend that ADR in the same PR.
 func LintRecipe(data []byte, opts LintOptions) ([]LintDiagnostic, error) {
 	// 1. Load config
 	cfg, err := LoadConfig(opts.ConfigPath)

@@ -6,9 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
+// Formula method validation against an embedded allowlist implements ADR-0002
+// (docs/adrs/0002-formula-method-validation.md). If you change how formulas are
+// validated or where the allowlist comes from, amend that ADR in the same PR.
+//
 //go:embed formulas.json
 var formulasJSON []byte
 

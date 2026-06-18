@@ -3,7 +3,7 @@ package lint
 import (
 	"testing"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 // loopRecipeJSON: trigger → [ repeat → [ logger action, while_condition ], logger action after loop ]

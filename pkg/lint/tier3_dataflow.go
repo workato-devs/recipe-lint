@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/igm"
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/igm"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 // lintTier3DataFlow runs Tier 3 cross-step data flow rules using the IGM alias map.

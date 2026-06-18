@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 // internalProviders are providers that should be skipped for CONFIG_PROVIDER_MATCH.

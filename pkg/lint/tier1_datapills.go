@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 // datapillMatch represents a single _dp() occurrence found in a string.

@@ -89,6 +89,9 @@ records, not settled truth** — many were written as a hypothesis ahead of impl
 - **Amend in the same change.** If your change contradicts what an ADR says, amend that ADR in
   place — a dated `> **Amendment (Month Year): …**` blockquote that preserves the original text —
   as part of the same PR. Don't silently let the record drift.
+- **Attribution is point-in-time.** `Author(s)` is frozen to who made the *original* decision; if
+  you join by amending, add yourself to `Amended-by` (with your `role`/`harness`/`model` and the
+  date), never to `Author(s)`. See §7.
 
 See `docs/adrs/0000-how-we-use-adrs.md` for the full convention (status vocabulary, when to amend
 vs. write a new ADR, header schema).

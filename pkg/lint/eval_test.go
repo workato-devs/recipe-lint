@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/workato-devs/wk-lint-beta/pkg/recipe"
+	"github.com/workato-devs/recipe-lint/pkg/recipe"
 )
 
 func sfStep(name string, input json.RawMessage) recipe.FlatStep {
