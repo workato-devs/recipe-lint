@@ -38,9 +38,10 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Download release assets and compute checksums
+      - name: Resolve release checksums
         id: checksums
         run: |
+          set -euo pipefail
           BASE="https://github.com/${{ env.TOOL_REPO }}/releases/download/${{ steps.release.outputs.tag }}"
           TOOL="${{ env.TOOL_NAME }}"
           VERSION="${{ steps.release.outputs.version }}"
@@ -54,10 +55,32 @@ jobs:
             [windows_arm64]="${TOOL}_${VERSION}_Windows_arm64.zip"
           )
 
+          # Read SHAs from goreleaser's authoritative checksums.txt instead of
+          # re-downloading and re-hashing each asset. This job is triggered the
+          # instant the release workflow reports success, which can be BEFORE the
+          # assets finish propagating. Previously `curl -sL` (no --fail) saved the
+          # 404 "Not Found" body and we hashed that, baking an identical bogus
+          # sha256 into every platform. Poll until checksums.txt exists and lists
+          # every expected asset, then fail loudly if anything is still missing.
+          for attempt in $(seq 1 20); do
+            if curl -fsSL -o checksums.txt "$BASE/checksums.txt"; then
+              ready=1
+              for key in "${!FILES[@]}"; do
+                awk -v f="${FILES[$key]}" '$2==f{found=1} END{exit !found}' checksums.txt || ready=0
+              done
+              [ "$ready" = 1 ] && break
+            fi
+            echo "checksums.txt not ready yet (attempt ${attempt}/20); waiting 15s..."
+            sleep 15
+          done
+
           for key in "${!FILES[@]}"; do
             file="${FILES[$key]}"
-            curl -sL -o "$file" "$BASE/$file"
-            sha=$(sha256sum "$file" | cut -d' ' -f1)
+            sha=$(awk -v f="$file" '$2==f{print $1}' checksums.txt)
+            if ! printf '%s' "$sha" | grep -Eq '^[0-9a-f]{64}$'; then
+              echo "::error::No valid sha256 for ${file} in checksums.txt (got: '${sha}'). Aborting before any commit to avoid clobbering the formula with a bad checksum."
+              exit 1
+            fi
             echo "${key}_sha=$sha" >> "$GITHUB_OUTPUT"
           done
 
@@ -94,6 +117,20 @@ jobs:
           update_sha 'Darwin_x86_64' "${{ steps.checksums.outputs.darwin_amd64_sha }}"
           update_sha 'Linux_arm64' "${{ steps.checksums.outputs.linux_arm64_sha }}"
           update_sha 'Linux_x86_64' "${{ steps.checksums.outputs.linux_amd64_sha }}"
+
+          # Guard: update_sha edits in place and silently no-ops if a marker
+          # moves. Confirm every resolved sha actually landed in the formula and
+          # no PLACEHOLDER survived before we commit.
+          if grep -q 'PLACEHOLDER' "$FORMULA"; then
+            echo "::error::$FORMULA still contains PLACEHOLDER after update."; exit 1
+          fi
+          for sha in \
+            "${{ steps.checksums.outputs.darwin_arm64_sha }}" \
+            "${{ steps.checksums.outputs.darwin_amd64_sha }}" \
+            "${{ steps.checksums.outputs.linux_arm64_sha }}" \
+            "${{ steps.checksums.outputs.linux_amd64_sha }}"; do
+            grep -q "$sha" "$FORMULA" || { echo "::error::Expected sha $sha not written to $FORMULA."; exit 1; }
+          done
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
