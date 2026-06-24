@@ -44,6 +44,7 @@ Checks each step for internal correctness without needing to know about other st
 | `WHILE_CONDITION_NO_PROVIDER` | `"while_condition"` steps should not have a `provider`, `name`, or `as` field | warn |
 | `NO_ELSIF` | `"elsif"` keyword is not allowed; use nested if/else instead | error |
 | `ACTION_NAME_VALID` | Action `name` must be in the allowed set for its `provider` (via connector `lint-rules.json`) | error |
+| `ACTION_RULES` | A connector-specific `action_rules` constraint (legacy v0.1.0 `lint-rules.json`) is violated | warn |
 | `RESPONSE_CODES_DEFINED` | API platform triggers should define response codes in input | info |
 
 ### Datapill Rules
@@ -67,6 +68,9 @@ Checks each step for internal correctness without needing to know about other st
 | `EIS_NAME_MATCH` | EIS field names must match `input` field names exactly | warn |
 | `EIS_NO_CONNECTOR_INTERNAL` | Connector-internal fields (e.g., `sobject_name`) should not appear in EIS | warn |
 | `EIS_OUTPUT_MIRRORS_INPUT` | `extended_output_schema` should mirror `extended_input_schema` for return actions | info |
+| `RETURN_RESPONSE_SCHEMA_PARITY` | A `return_response` block's `extended_input_schema` and `extended_output_schema` must be structurally identical (field names, types, nesting) | error |
+| `RETURN_RESPONSE_SCHEMA_CONSISTENT` | All `return_response` blocks in the recipe must share an identical EIS and EOS | warn |
+| `RETURN_RESPONSE_INPUT_MIRROR` | Every `input.response` field must be defined under the `return_response` EIS `response` field's properties | warn |
 
 ### Formula Method Rules
 
@@ -74,6 +78,19 @@ Checks each step for internal correctness without needing to know about other st
 |---------|-------------|---------|
 | `FORMULA_FORBIDDEN_PATTERN` | Known-bad formula pattern detected (with specific replacement suggestion) | warn |
 | `FORMULA_METHOD_INVALID` | Method name is not in the Workato formula allowlist (~120 methods) | warn |
+
+### Action Authoring Rules
+
+Connector- and action-specific footguns where syntactically valid input is silently dropped or rejected on import.
+
+| Rule ID | Description | Default |
+|---------|-------------|---------|
+| `UPDATE_VARS_RAW_FORM` | `update_variables` uses the structured `variables:[{variable,value}]` form, which is silently dropped on import; use `input_mode:"raw"` with flat per-variable keys | error |
+| `BODY_FORMULA_MODE` | A `body` field uses formula mode (`=` prefix), which may be silently stripped; use `#{}` interpolation | warn |
+| `BUTTON_PARAMS_FORMAT` | Button `params` use URL-encoded format, which Workbot silently drops; use space-separated `key: value` | warn |
+| `STOP_MISSING_REASON` | A `stop` action is missing the `stop_reason` field (required for recipe activation) | warn |
+| `STOP_ERROR_IN_GENIE` | `stop` with `stop_with_error:"true"` is rejected in genie skill recipes; use `workflow_return_result` with `success:false` | error |
+| `GENIE_SKILL_DESCRIPTION_EMPTY` | A genie skill trigger has an empty `description`; the UI will show a blank skill entry | warn |
 
 ## Tier 2: Inter-Step Structure
 
