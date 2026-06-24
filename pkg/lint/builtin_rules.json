@@ -397,6 +397,33 @@
       "scope": "recipe",
       "assert": { "builtin": "check_eis" }
     },
+    {
+      "rule_id": "RETURN_RESPONSE_SCHEMA_PARITY",
+      "tier": 1,
+      "level": "error",
+      "message": "return_response extended_input_schema and extended_output_schema diverge",
+      "suggested_fix": "Make the return_response extended_input_schema and extended_output_schema structurally identical — same field names, types, and nesting. Editing one side without the other corrupts the recipe's datapill metadata.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_return_response_schema" }
+    },
+    {
+      "rule_id": "RETURN_RESPONSE_SCHEMA_CONSISTENT",
+      "tier": 1,
+      "level": "warn",
+      "message": "return_response blocks do not share an identical schema",
+      "suggested_fix": "Ensure every return_response block in the recipe declares an identical extended_input_schema and extended_output_schema.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_return_response_schema" }
+    },
+    {
+      "rule_id": "RETURN_RESPONSE_INPUT_MIRROR",
+      "tier": 1,
+      "level": "warn",
+      "message": "input.response field is not defined in extended_input_schema",
+      "suggested_fix": "Add the input.response field to the return_response extended_input_schema, or remove it from input.response.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_return_response_schema" }
+    },
 
     {
       "rule_id": "FORMULA_METHOD_INVALID",

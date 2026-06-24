@@ -78,4 +78,17 @@ func init() {
 		}
 		return filtered
 	})
+
+	RegisterBuiltin("check_return_response_schema", func(ctx *BuiltinContext, rule *CustomRule) []LintDiagnostic {
+		allDiags := ctx.CacheGetOrCompute("check_return_response_schema", func() interface{} {
+			return checkReturnResponseSchema(ctx.Parsed)
+		}).([]LintDiagnostic)
+		var filtered []LintDiagnostic
+		for _, d := range allDiags {
+			if d.RuleID == rule.RuleID {
+				filtered = append(filtered, d)
+			}
+		}
+		return filtered
+	})
 }
