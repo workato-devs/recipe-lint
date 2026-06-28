@@ -11,6 +11,7 @@
 **Amendments:**
 - June 2026 — Recorded the `lint-rules.json` contract's downstream consumer (the agent-skills repo) and pointed to the Labs-repo ADR that owns that cross-repo decision.
 - June 2026 — Added the `check_return_response_schema` builtin (issue #17), taking the builtin count from 27 to 28; recorded that issue #18 is addressed as recipe-skills allowlist data (no rule in this binary).
+- June 2026 — Added the `DP_PATH_RESOLVES` rule (issue #22), backed by Go via the existing `check_dataflow` builtin (no new `RegisterBuiltin`; registered-builtin count stays 28). Grows the Go-backed rule-ID surface — debt counted deliberately.
 
 ---
 
@@ -121,5 +122,27 @@ The principle is that the declarative path is the default and the `builtin` path
 >   the skills repo's cadence — and is tracked by recipe-skills#4. The lesson:
 >   when an "invalid action for a provider" gap appears, the answer is connector allowlist data, not
 >   a new rule in this binary.
+
+> **Amendment (June 2026): `DP_PATH_RESOLVES` (issue #22) is a new Go-backed rule — debt against the bar, but the registered-builtin count is unchanged.**
+> Issue #22 adds `DP_PATH_RESOLVES`: a datapill's `path` must resolve to a field declared in
+> the referenced step's `extended_output_schema`. Resolving a path against a nested EOS tree
+> (descending `properties`, skipping array indices, stopping at open containers) is not
+> expressible in the current declarative assertion vocabulary, so it is a legitimate use of
+> the `builtin` escape hatch — and therefore debt against the PRD bar, counted here.
+>
+> - **Debt-metric precision.** This rule reuses the **existing** `check_dataflow` builtin (it
+>   adds a Go function, `checkDPPathResolves`, routed through that builtin, not a new
+>   registration). So the **registered-builtin count stays 28** — verify with
+>   `grep -rh 'RegisterBuiltin("' pkg/lint/*.go | grep -v '__tier0__' | wc -l`. What grows is
+>   the count of **Go-backed rule IDs** / the code-based rule surface. Don't read the
+>   unchanged `RegisterBuiltin` count as "no new code debt" — the two metrics differ.
+> - **Debt was deliberately bounded.** v1 is **recipe-EOS-only** and conservative: it validates
+>   only where the recipe materializes a schema and stops-and-accepts on absent/open/dynamic
+>   schemas (no false positives on raw-JSON outputs). The wider goal — validating `path`
+>   against **connector-declared** output schemas (from `--skills-path` `lint-rules.json`,
+>   `ConnRules`) for steps with no recipe EOS — is deferred to a tracked v2 follow-up. That v2
+>   is a candidate for the "expand the declarative vocabulary vs. accept bounded builtins as
+>   legitimate" decision this ADR already flagged under Follow-on work, since connector-schema
+>   data is exactly the "rules as data" path.
 
 <!-- When this evolves, add a dated amendment in place; do not rewrite the above. -->

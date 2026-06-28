@@ -19,6 +19,14 @@ func lintTier3DataFlow(parsed *recipe.ParsedRecipe, graph *igm.Graph) []LintDiag
 	// (backwards — which nodes can provide data to this node)
 	reachableFrom := buildReachabilityIndex(graph)
 
+	// Build alias → step map for resolving datapill paths against a step's EOS.
+	aliasToStep := make(map[string]*recipe.FlatStep, len(parsed.Steps))
+	for i := range parsed.Steps {
+		if as := parsed.Steps[i].Code.As; as != "" {
+			aliasToStep[as] = &parsed.Steps[i]
+		}
+	}
+
 	for i := range parsed.Steps {
 		step := &parsed.Steps[i]
 		if step.Code.Input == nil {
@@ -37,6 +45,7 @@ func lintTier3DataFlow(parsed *recipe.ParsedRecipe, graph *igm.Graph) []LintDiag
 				diags = append(diags, checkDPProviderMatches(dp.Payload, pointer, graph.AliasMap, stepProviders)...)
 				diags = append(diags, checkDPStepReachable(dp.Payload, pointer, step, graph, reachableFrom)...)
 				diags = append(diags, checkDPTriggerPath(dp.Payload, pointer, parsed)...)
+				diags = append(diags, checkDPPathResolves(dp.Payload, pointer, aliasToStep)...)
 			}
 		})
 	}
@@ -170,6 +179,69 @@ func checkDPTriggerPath(payload *DatapillPayload, pointer string, parsed *recipe
 			RuleID:  "DP_TRIGGER_PATH",
 			Tier:    3,
 		}}
+	}
+	return nil
+}
+
+// checkDPPathResolves verifies that a datapill's path resolves to a field declared in the
+// referenced step's extended_output_schema (EOS). Conservative, recipe-EOS-only:
+//   - Skips when the line is unresolved (owned by DP_LINE_RESOLVES) — no double-flag.
+//   - Skips when the target step declares no EOS (absent/dynamic schema → can't validate).
+//   - Stops and accepts at any open container (an object/array field with no declared
+//     properties) — a dynamic/raw-JSON subtree whose shape isn't materialized in the recipe.
+//   - Ignores numeric path segments (array indices); array element fields live under properties.
+//
+// Rule: DP_PATH_RESOLVES
+func checkDPPathResolves(payload *DatapillPayload, pointer string, aliasToStep map[string]*recipe.FlatStep) []LintDiagnostic {
+	if payload.Line == "" {
+		return nil
+	}
+	step, ok := aliasToStep[payload.Line]
+	if !ok {
+		return nil // unresolved alias — owned by DP_LINE_RESOLVES
+	}
+
+	fields, err := parseEIS(step.Code.ExtendedOutputSchema)
+	if err != nil || len(fields) == 0 {
+		return nil // absent/dynamic/unparseable schema → accept
+	}
+
+	current := fields
+	for _, seg := range payload.Path {
+		name, isStr := seg.(string)
+		if !isStr {
+			// numeric array index (or other non-string) — element fields are at the
+			// same schema level, so stay put.
+			continue
+		}
+		field := findEISField(current, name)
+		if field == nil {
+			return []LintDiagnostic{{
+				Level:   LevelWarn,
+				Message: fmt.Sprintf("Datapill path field %q is not declared in step %q extended_output_schema", name, payload.Line),
+				Source:  &SourceRef{JSONPointer: pointer},
+				RuleID:  "DP_PATH_RESOLVES",
+				Tier:    3,
+			}}
+		}
+		if len(field.Properties) == 0 {
+			// Leaf, or an open container with no declared properties — cannot verify
+			// any deeper, so accept the remaining path.
+			return nil
+		}
+		current = field.Properties
+	}
+	return nil
+}
+
+// findEISField returns the field with the given name (exact match) from a field list, or nil.
+// Matching is case-sensitive: a datapill path is generated from the schema, so a case
+// difference indicates a hand-edited (broken) reference, which is what this rule catches.
+func findEISField(fields []EISField, name string) *EISField {
+	for i := range fields {
+		if fields[i].Name == name {
+			return &fields[i]
+		}
 	}
 	return nil
 }

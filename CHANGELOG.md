@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Datapill path resolution (#22): `DP_PATH_RESOLVES` (Tier 3) flags a datapill whose `path`
+  points at a field not declared in the referenced step's `extended_output_schema` — the
+  "made-up field" failure mode that previously passed lint and only surfaced in the Workato
+  UI as "Please replace invalid datapill(s)". Conservative and recipe-EOS-only: it validates
+  only where the recipe materializes a schema and skips absent/open/dynamic schemas to avoid
+  false positives on raw-JSON outputs. `warn` in `standard`, `error` in `strict`. Validating
+  against connector-declared schemas (for steps with no recipe EOS) is a tracked follow-up.
 - Loop structural validation for `repeat`/`while_condition` (#13): `REPEAT_NO_PROVIDER`
   and `WHILE_CONDITION_NO_PROVIDER` (Tier 1), `REPEAT_HAS_WHILE_CONDITION` and
   `WHILE_CONDITION_LAST_IN_REPEAT` (Tier 2). A malformed loop missing its
