@@ -119,6 +119,7 @@ Resolves datapill references across steps using the control flow graph and step 
 | `DP_PROVIDER_MATCHES` | Datapill `provider` must match the resolved step's actual provider | warn |
 | `DP_STEP_REACHABLE` | The step referenced by a datapill must be reachable in the control flow graph | warn |
 | `DP_TRIGGER_PATH` | API endpoint datapill paths should start with `"request"` | info |
+| `DP_PATH_RESOLVES` | Datapill `path` must resolve to a field declared in the referenced step's `extended_output_schema` (recipe-EOS-only; dynamic/open schemas are skipped) | warn |
 
 ## Custom Rule Loading
 

@@ -616,6 +616,15 @@
       "suggested_fix": "Start the datapill path with \"request\" for API endpoint triggers.",
       "scope": "recipe",
       "assert": { "builtin": "check_dataflow" }
+    },
+    {
+      "rule_id": "DP_PATH_RESOLVES",
+      "tier": 3,
+      "level": "warn",
+      "message": "Datapill path field is not declared in the referenced step's extended_output_schema",
+      "suggested_fix": "Reference a field declared in the step's extended_output_schema, or correct the datapill path. Only validated when the step materializes a schema in the recipe; dynamic/open schemas are skipped.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_dataflow" }
     }
   ]
 }

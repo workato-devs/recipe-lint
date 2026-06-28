@@ -65,6 +65,7 @@
     "DP_LINE_RESOLVES": "warn",
     "DP_PROVIDER_MATCHES": "warn",
     "DP_STEP_REACHABLE": "warn",
-    "DP_TRIGGER_PATH": "info"
+    "DP_TRIGGER_PATH": "info",
+    "DP_PATH_RESOLVES": "warn"
   }
 }
