@@ -10,6 +10,7 @@
 
 **Amendments:**
 - June 2026 — Recorded the `lint-rules.json` contract's downstream consumer (the agent-skills repo) and pointed to the Labs-repo ADR that owns that cross-repo decision.
+- June 2026 — Added the `check_return_response_schema` builtin (issue #17), taking the builtin count from 27 to 28; recorded that issue #18 is addressed as recipe-skills allowlist data (no rule in this binary).
 
 ---
 
@@ -98,5 +99,27 @@ The principle is that the declarative path is the default and the `builtin` path
 > beyond this repo. The cross-repo decision itself — what the skills repo declares and why — is owned
 > and recorded in the Labs repo (`labs/docs/adrs/LABS-0001-skills-lint-rules-as-data.md`), not here;
 > this ADR governs only the linter-side schema it consumes.
+
+> **Amendment (June 2026): builtin count is now 28 (issue #17); issue #18 is being addressed as skills data, not in this binary.**
+> The Consequences section above states "27 registered builtins" as of its writing. Issue #17 moved
+> that number to **28** — verify with
+> `grep -rh 'RegisterBuiltin("' pkg/lint/*.go | grep -v '__tier0__' | wc -l`.
+>
+> - **Issue #17** (`return_response` EIS↔EOS schema parity) added **one** builtin,
+>   `check_return_response_schema` (backing `RETURN_RESPONSE_SCHEMA_PARITY`,
+>   `RETURN_RESPONSE_SCHEMA_CONSISTENT`, `RETURN_RESPONSE_INPUT_MIRROR`). It is a legitimate use of
+>   the escape hatch: structural deep-comparison of two schemas by name/type/nesting, and cross-step
+>   set-identity, are not expressible in the current assertion vocabulary. This is debt against the
+>   PRD bar, counted here deliberately.
+> - **Issue #18** (`provider: workato` / `set_variable[s]` is UI-unsupported) added **nothing to this
+>   repo** — by design. A first pass shipped a bespoke `WORKATO_PROVIDER_UNSUPPORTED` rule here that
+>   used a forced-failure `where`/`field_absent` trick to catch two hardcoded names; it was reverted
+>   as heterogeneous and too narrow. The homogeneous fix is **skills data**: declare the `workato`
+>   provider's `valid_action_names` in a recipe-skills `lint-rules.json`, and the existing
+>   `ACTION_NAME_VALID` rule (`tier1_steps.go`) flags every invalid `workato` action with no
+>   `recipe-lint` change. That is the PRD bar working as intended — a real rule shipping as data on
+>   the skills repo's cadence — and is tracked by recipe-skills#4. The lesson:
+>   when an "invalid action for a provider" gap appears, the answer is connector allowlist data, not
+>   a new rule in this binary.
 
 <!-- When this evolves, add a dated amendment in place; do not rewrite the above. -->
