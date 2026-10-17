@@ -20,6 +20,8 @@ const (
 	NodeElse    NodeKind = "else"
 	NodeTry     NodeKind = "try"
 	NodeCatch   NodeKind = "catch"
+	NodeForeach NodeKind = "foreach"
+	NodeRepeat  NodeKind = "repeat" // Go-only; the TS transformer defers repeat
 	NodeBranch  NodeKind = "branch"
 	NodeEnd     NodeKind = "end"
 )
@@ -33,6 +35,8 @@ const (
 	EdgeFalse    EdgeKind = "false"
 	EdgeError    EdgeKind = "error"
 	EdgeTerminal EdgeKind = "terminal"
+	EdgeLoop     EdgeKind = "loop" // loop node → body head, and body tail → loop node
+	EdgeExit     EdgeKind = "exit" // loop node → the step after the loop
 )
 
 // Node represents a single node in the IGM graph.

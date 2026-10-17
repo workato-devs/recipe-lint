@@ -1,6 +1,7 @@
 # Recipe Linter: Tiered Validation for Workato Recipe JSON
 
 **Author(s):** Zayne Turner, Claude [role: assistant; harness: Claude Code]
+**Amended-by:** Claude [role: assistant; harness: Claude Code; model: Opus 5.5], dir. Zayne Turner — October 2026
 **Amended-by:** Codex [role: assistant; harness: Codex; model: GPT-5], dir. Zayne Turner — July 2026
 **Amended-by:** Claude [role: assistant; harness: Claude Code; model: Opus 4.8], dir. Zayne Turner — June 2026
 **Amended-by:** Claude [role: assistant; harness: Claude Code], dir. Zayne Turner — March 2026
@@ -9,6 +10,7 @@
 **Implemented:** March 20, 2026 (IGM port + Tiers 2-3)
 
 **Amendments:**
+- October 17, 2026 — IGM models `foreach`/`repeat` loops (loop/exit edges); fixes loop false positives (#32)
 - July 21, 2026 — Optional plugin-owned text renderer added; structured lint results remain canonical
 - June 16, 2026 — Linter split into standalone `recipe-lint` repo; "Where Things Live" layout corrected
 - June 12, 2026 — Tier-2 structure/flow split; recipe tree-ancestry layer
@@ -290,6 +292,34 @@ The connector-internal exception list is loaded from JSON data files in the skil
 > (`pkg/lint/tier2_loops.go`), and loop *control-flow* rules do not exist yet. This was a
 > conscious scope decision: the reported loop bug (#13) is a structural malformation, so it
 > did not require taking on loop control-flow semantics to fix.
+>
+> **Amendment (October 2026): the IGM now models `foreach` and `repeat` loops (#32).**
+> The deferral above had a correctness cost it did not record. The Go transformer did not
+> flatten loops to a generic action. It dropped them entirely: `processStep` had no case for
+> `foreach`/`repeat`, so the loop node, its body, its alias and the sequential edges on both
+> sides of it were all missing. Every recipe with a loop got Tier-3 false positives
+> (`DP_LINE_RESOLVES` on the loop's `as` alias and on body-step aliases, `DP_STEP_REACHABLE`
+> for steps after the loop), and API-endpoint recipes got `ALL_PATHS_RETURN` on the step
+> just before the loop, which looked like a dangling path. The repo's own
+> `repeat_while_correct` fixture had the `DP_LINE_RESOLVES` false positive, unnoticed.
+>
+> The loop model, ported from the TS `processForeach`:
+>
+> - `foreach` → `NodeForeach`, `repeat` → `NodeRepeat` (a Go-side extension; the TS
+>   transformer still defers `repeat`). The loop's `as` is registered in the alias map.
+> - `EdgeLoop` from the loop node to its body head, and from each non-terminal body tail
+>   back to the loop node. `EdgeExit` from the loop node to the step after the loop.
+> - A loop that ends its block exits to `::end` like any other dangling node. Its body-entry
+>   loop edge doesn't count as an outgoing edge for that check, so `ALL_PATHS_RETURN` still
+>   flags an API recipe that ends in a loop.
+> - `while_condition` is not a graph node. More generally, a step that yields no node is now
+>   skipped in a sequence, so its neighbors still connect to each other.
+>
+> Still deferred: infinite-loop detection and any loop-specific control-flow rules. Because
+> of the back edges, reachability over-approximates inside a loop body: a body step counts
+> as reachable from an earlier body step in the same iteration. That direction can only miss
+> a finding, never produce a false positive. The loop *structural* rules stay on the tree
+> layer as described above.
 
 **What it checks:** Are the relationships between steps correct?
 

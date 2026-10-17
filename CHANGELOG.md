@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Loop control flow (#32): the control-flow graph that Tier 2-3 rules run on dropped
+  `foreach` and `repeat` blocks entirely, producing false positives on any recipe with a
+  loop. The bug was wider than #32 describes. The 1.1.0 build:
+  - didn't register the loop's own `as` alias, so `provider: "foreach"` datapills for the
+    current item failed `DP_LINE_RESOLVES`;
+  - didn't register the alias of any step inside a loop body (e.g. `get_email_detail` and
+    `find_contact` in the recipe-skills Gmail template), so datapills referencing them also
+    failed `DP_LINE_RESOLVES`;
+  - disconnected the steps after a loop, so datapills referencing steps before the loop
+    failed `DP_STEP_REACHABLE`;
+  - reported `ALL_PATHS_RETURN` on the step before a loop in API endpoint and callable
+    recipes, even when a return follows the loop.
+
+  Loops are now modeled in the graph. A recipe that genuinely ends in a loop without a
+  return is still flagged by `ALL_PATHS_RETURN`, now on the loop step itself.
+
 ## [1.1.0] -- 2026-08-01
 
 ### Added
