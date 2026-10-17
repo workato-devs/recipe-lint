@@ -36,6 +36,8 @@ make build && WK_HOME=$(mktemp -d) sh -c 'wk plugins install . && wk lint path/t
 
 CI (`.github/workflows/ci.yml`) runs `make ci` on pushes and PRs to `develop` and `main`. gofmt drift fails it.
 
+Workflows pin every third-party action to a full 40-character commit SHA with the version as a trailing comment (`uses: actions/checkout@<sha> # v6.1.0`), never a tag like `@v6`, so a moved or compromised tag can't change what runs. When bumping, check that the SHA matches the release tag (`gh api repos/<owner>/<repo>/commits/<tag> -q .sha`), and prefer releases that have been out for a while.
+
 ## Architecture
 
 ### Pipeline (pkg/lint/lint.go → LintRecipe)
