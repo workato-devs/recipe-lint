@@ -17,17 +17,17 @@ type Snapshot struct {
 
 // SnapshotNode is a normalized node for snapshot comparison.
 type SnapshotNode struct {
-	ID                  string `json:"id"`
-	Kind                string `json:"kind"`
-	Label               string `json:"label"`
-	Pointer             string `json:"pointer"`
-	IsTerminal          bool   `json:"is_terminal"`
+	ID                  string  `json:"id"`
+	Kind                string  `json:"kind"`
+	Label               string  `json:"label"`
+	Pointer             string  `json:"pointer"`
+	IsTerminal          bool    `json:"is_terminal"`
 	Provider            *string `json:"provider"`
-	ProviderDisplayName string `json:"provider_display_name"`
-	StepAs              string `json:"step_as"`
-	StepName            string `json:"step_name"`
-	HTTPStatus          string `json:"http_status"`
-	TriggerType         string `json:"trigger_type"`
+	ProviderDisplayName string  `json:"provider_display_name"`
+	StepAs              string  `json:"step_as"`
+	StepName            string  `json:"step_name"`
+	HTTPStatus          string  `json:"http_status"`
+	TriggerType         string  `json:"trigger_type"`
 }
 
 // SnapshotEdge is a normalized edge for snapshot comparison.

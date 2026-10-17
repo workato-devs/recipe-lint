@@ -182,10 +182,10 @@ func TestEIS_OUTPUT_MIRRORS_INPUT_Info(t *testing.T) {
 func TestEIS_PyEvalPlatformFields_NoFalsePositive(t *testing.T) {
 	eis := json.RawMessage(`[{"name":"code_input","label":"Input fields","type":"object","properties":[{"name":"schema","type":"string"},{"name":"data","type":"object"}]}]`)
 	input := rawJSON(t, map[string]interface{}{
-		"code":                     "def main(input):\n    return {'result': input['text']}\n",
-		"code_input":               map[string]interface{}{"data": map[string]interface{}{"text": "hello"}},
-		"code_output_schema_json":  `[{"name":"result","type":"string"}]`,
-		"name":                     "Reverse text",
+		"code":                    "def main(input):\n    return {'result': input['text']}\n",
+		"code_input":              map[string]interface{}{"data": map[string]interface{}{"text": "hello"}},
+		"code_output_schema_json": `[{"name":"result","type":"string"}]`,
+		"name":                    "Reverse text",
 	})
 	parsed := buildParsedRecipe("test", []recipe.FlatStep{
 		{

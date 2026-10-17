@@ -481,4 +481,3 @@ func allDescendantIDs(graph *igm.Graph, rootID string) map[string]bool {
 	walk(rootID)
 	return result
 }
-

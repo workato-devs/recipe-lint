@@ -86,16 +86,16 @@ type tailNode struct {
 
 // stepBlock is the raw JSON structure of a recipe step.
 type stepBlock struct {
-	Keyword                string            `json:"keyword"`
-	Provider               *string           `json:"provider"`
-	Name                   string            `json:"name,omitempty"`
-	As                     string            `json:"as,omitempty"`
-	Number                 *int              `json:"number,omitempty"`
-	UUID                   string            `json:"uuid,omitempty"`
-	Input                  json.RawMessage   `json:"input,omitempty"`
-	Block                  []json.RawMessage `json:"block,omitempty"`
-	ExtendedInputSchema    json.RawMessage   `json:"extended_input_schema,omitempty"`
-	ExtendedOutputSchema   json.RawMessage   `json:"extended_output_schema,omitempty"`
+	Keyword              string            `json:"keyword"`
+	Provider             *string           `json:"provider"`
+	Name                 string            `json:"name,omitempty"`
+	As                   string            `json:"as,omitempty"`
+	Number               *int              `json:"number,omitempty"`
+	UUID                 string            `json:"uuid,omitempty"`
+	Input                json.RawMessage   `json:"input,omitempty"`
+	Block                []json.RawMessage `json:"block,omitempty"`
+	ExtendedInputSchema  json.RawMessage   `json:"extended_input_schema,omitempty"`
+	ExtendedOutputSchema json.RawMessage   `json:"extended_output_schema,omitempty"`
 }
 
 func (ctx *buildContext) addNode(n Node) {
