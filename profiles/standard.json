@@ -20,6 +20,7 @@
     "CONFIG_NO_WORKATO": "warn",
     "CONFIG_PROVIDER_MATCH": "warn",
     "ACTION_NAME_VALID": "warn",
+    "ACTION_NAME_UNVERIFIED": "info",
     "RESPONSE_CODES_DEFINED": "info",
     "IF_NO_PROVIDER": "warn",
     "ELSE_NO_PROVIDER": "warn",

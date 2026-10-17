@@ -279,6 +279,15 @@
       "assert": { "builtin": "check_action_name_valid" }
     },
     {
+      "rule_id": "ACTION_NAME_UNVERIFIED",
+      "tier": 1,
+      "level": "info",
+      "message": "Action/trigger names were not validated for this provider",
+      "suggested_fix": "Pass --skills-path pointing at a skills directory with a lint-rules.json for this connector. To ignore providers you don't have rules for, set this rule to \"off\" in .wklintrc.json.",
+      "scope": "recipe",
+      "assert": { "builtin": "check_action_name_valid" }
+    },
+    {
       "rule_id": "ACTION_RULES",
       "tier": 1,
       "level": "warn",

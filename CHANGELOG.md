@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ACTION_NAME_UNVERIFIED` (#31): `ACTION_NAME_VALID` only checks providers that have a
+  connector `lint-rules.json` under `--skills-path`. For every other provider it skipped
+  silently, so a clean lint couldn't be told apart from one where nothing was checked. The
+  new rule emits one `info` diagnostic per provider whose action/trigger names were not
+  validated (`warn` in the strict profile). Set it to `"error"` in `.wklintrc.json` to fail
+  CI on unverified connectors, or `"off"` to silence it. Expect it on most recipes for now:
+  Workato platform connectors such as `logger`, `workato_recipe_function` and
+  `workato_api_platform` don't have skills rules yet.
+- `SKILLS_PATH_INVALID` (#31): a `--skills-path` that doesn't exist or isn't a directory now
+  emits a warning instead of silently loading no connector rules.
+
 ### Fixed
 
 - Loop control flow (#32): the control-flow graph that Tier 2-3 rules run on dropped

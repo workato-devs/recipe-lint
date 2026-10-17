@@ -44,6 +44,7 @@ Checks each step for internal correctness without needing to know about other st
 | `WHILE_CONDITION_NO_PROVIDER` | `"while_condition"` steps should not have a `provider`, `name`, or `as` field | warn |
 | `NO_ELSIF` | `"elsif"` keyword is not allowed; use nested if/else instead | error |
 | `ACTION_NAME_VALID` | Action `name` must be in the allowed set for its `provider` (via connector `lint-rules.json`) | error |
+| `ACTION_NAME_UNVERIFIED` | A step's `provider` has no connector `lint-rules.json` (or its file declares no names for that step kind), so its action/trigger names were not validated. Reported once per provider; set to `"off"` in `.wklintrc.json` to silence | info |
 | `ACTION_RULES` | A connector-specific `action_rules` constraint (legacy v0.1.0 `lint-rules.json`) is violated | warn |
 | `RESPONSE_CODES_DEFINED` | API platform triggers should define response codes in input | info |
 
@@ -128,3 +129,4 @@ Emitted during rule file discovery, not tied to a specific tier.
 | Rule ID | Description | Default |
 |---------|-------------|---------|
 | `CUSTOM_RULE_INVALID` | A custom rule file could not be parsed or a rule failed validation (shows file path and error) | warn |
+| `SKILLS_PATH_INVALID` | `--skills-path` was given but is not a directory, so no connector lint rules were loaded | warn |
