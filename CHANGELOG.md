@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] -- 2026-10-17
+
 ### Added
 
 - `ACTION_NAME_UNVERIFIED` (#31): `ACTION_NAME_VALID` only checks providers that have a
@@ -19,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `workato_api_platform` don't have skills rules yet.
 - `SKILLS_PATH_INVALID` (#31): a `--skills-path` that doesn't exist or isn't a directory now
   emits a warning instead of silently loading no connector rules.
+
+### Changed
+
+- `plugin.toml` declares `files = ["profiles/*.json"]` (wk#101). With wk 1.1.0+,
+  `wk plugins install` copies only the manifest, the binary and the profiles instead of the
+  whole directory. Older wk versions ignore the key.
+- CI (#29): pushes and PRs to `develop`/`main` now run build, `go vet`, a gofmt check and
+  tests (`make ci` runs the same checks locally).
 
 ### Fixed
 
@@ -37,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Loops are now modeled in the graph. A recipe that genuinely ends in a loop without a
   return is still flagged by `ALL_PATHS_RETURN`, now on the loop step itself.
+- Plugin version (#30): `plugin.toml`'s `version` had been stuck at `0.1.0` since the plugin
+  was scaffolded, so `wk plugins install` and `wk plugins list` reported `v0.1.0` whatever
+  release was installed. It now matches the release.
 
 ## [1.1.0] -- 2026-08-01
 
