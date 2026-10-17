@@ -48,9 +48,16 @@ func Transform(data []byte) (*Graph, error) {
 		}
 	}
 
-	// Connect dangling nodes (no outgoing edges) to ::end
+	// Connect dangling nodes (no outgoing edges) to ::end. A loop's entry edge
+	// into its own body is not a way out, so a loop with no step after it still
+	// exits to ::end.
 	outgoing := make(map[string]bool)
 	for _, e := range ctx.graph.Edges {
+		if e.Kind == EdgeLoop {
+			if to := ctx.graph.NodeByID(e.To); to != nil && to.ParentID == e.From {
+				continue
+			}
+		}
 		outgoing[e.From] = true
 	}
 	for _, n := range ctx.graph.Nodes {
@@ -82,20 +89,21 @@ type tailNode struct {
 	id             string
 	isTerminal     bool
 	needsFalseExit bool // if-without-else: needs false edge to next step
+	isLoopExit     bool // foreach/repeat: needs exit edge to next step
 }
 
 // stepBlock is the raw JSON structure of a recipe step.
 type stepBlock struct {
-	Keyword                string            `json:"keyword"`
-	Provider               *string           `json:"provider"`
-	Name                   string            `json:"name,omitempty"`
-	As                     string            `json:"as,omitempty"`
-	Number                 *int              `json:"number,omitempty"`
-	UUID                   string            `json:"uuid,omitempty"`
-	Input                  json.RawMessage   `json:"input,omitempty"`
-	Block                  []json.RawMessage `json:"block,omitempty"`
-	ExtendedInputSchema    json.RawMessage   `json:"extended_input_schema,omitempty"`
-	ExtendedOutputSchema   json.RawMessage   `json:"extended_output_schema,omitempty"`
+	Keyword              string            `json:"keyword"`
+	Provider             *string           `json:"provider"`
+	Name                 string            `json:"name,omitempty"`
+	As                   string            `json:"as,omitempty"`
+	Number               *int              `json:"number,omitempty"`
+	UUID                 string            `json:"uuid,omitempty"`
+	Input                json.RawMessage   `json:"input,omitempty"`
+	Block                []json.RawMessage `json:"block,omitempty"`
+	ExtendedInputSchema  json.RawMessage   `json:"extended_input_schema,omitempty"`
+	ExtendedOutputSchema json.RawMessage   `json:"extended_output_schema,omitempty"`
 }
 
 func (ctx *buildContext) addNode(n Node) {
@@ -237,6 +245,8 @@ func (ctx *buildContext) processStep(raw json.RawMessage, pointer, parentID stri
 		return ctx.processIf(&step, pointer, parentID)
 	case "try":
 		return ctx.processTry(&step, pointer, parentID)
+	case "foreach", "repeat":
+		return ctx.processLoop(&step, pointer, parentID)
 	default:
 		// provider+name without keyword → action
 		if step.Provider != nil && step.Name != "" {
@@ -264,7 +274,12 @@ func (ctx *buildContext) processStepSequence(block []json.RawMessage, basePointe
 			continue
 		}
 
+		// Steps that produce no node (e.g. a repeat's while_condition) are
+		// skipped, so their neighbours still connect to each other.
 		result := ctx.processStepToResult(&step, raw, pointer, parentID)
+		if result.headID == "" {
+			continue
+		}
 		results = append(results, result)
 	}
 
@@ -286,6 +301,8 @@ func (ctx *buildContext) processStepSequence(block []json.RawMessage, basePointe
 			kind := EdgeNext
 			if tail.needsFalseExit {
 				kind = EdgeFalse
+			} else if tail.isLoopExit {
+				kind = EdgeExit
 			}
 			ctx.addEdge(kind, tail.id, next.headID)
 		}
@@ -323,6 +340,11 @@ func (ctx *buildContext) processStepToResult(step *stepBlock, raw json.RawMessag
 		return ctx.lastIfResult
 	case NodeTry:
 		return ctx.lastTryResult
+	case NodeForeach, NodeRepeat:
+		return traversalResult{
+			headID: id,
+			tails:  []tailNode{{id: id, isLoopExit: true}},
+		}
 	default:
 		return traversalResult{
 			headID: id,
@@ -553,6 +575,40 @@ func (ctx *buildContext) processTry(step *stepBlock, pointer, parentID string) s
 	}
 
 	ctx.lastTryResult = result
+	return id
+}
+
+// processLoop handles foreach and repeat blocks, mirroring the TS processForeach:
+// a loop edge from the loop node into its body, a loop edge from each
+// non-terminal body tail back to the loop node, and the loop node itself as the
+// tail, so the step after the loop is reached via an exit edge. repeat follows
+// the same shape; its while_condition child is not an executable node.
+func (ctx *buildContext) processLoop(step *stepBlock, pointer, parentID string) string {
+	id := nodeID(step, pointer)
+	kind, label := NodeForeach, "For Each"
+	if step.Keyword == "repeat" {
+		kind, label = NodeRepeat, "Repeat"
+	}
+	ctx.addNode(Node{
+		ID:       id,
+		Kind:     kind,
+		Label:    labelOr(step.As, label),
+		Pointer:  pointer,
+		StepAs:   step.As,
+		ParentID: parentID,
+	})
+	ctx.registerAlias(step.As, id)
+
+	body := ctx.processStepSequence(step.Block, pointer+"/block", id)
+	if body.headID != "" {
+		ctx.addEdge(EdgeLoop, id, body.headID)
+		for _, tail := range body.tails {
+			if !tail.isTerminal {
+				ctx.addEdge(EdgeLoop, tail.id, id)
+			}
+		}
+	}
+
 	return id
 }
 

@@ -237,4 +237,3 @@ func isAPIPlatformSourceProvider(payload *DatapillPayload) bool {
 	}
 	return p == "workato_api_platform" || p == "rest" || p == "http"
 }
-

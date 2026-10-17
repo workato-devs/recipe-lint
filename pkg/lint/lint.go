@@ -1,6 +1,8 @@
 package lint
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/workato-devs/recipe-lint/pkg/igm"
@@ -115,7 +117,17 @@ func LintRecipe(data []byte, opts LintOptions) ([]LintDiagnostic, error) {
 		return diags, err
 	}
 
-	// 7. Load connector rules
+	// 7. Load connector rules. The loader treats a missing skills path as "no
+	// rules", so surface a path that was given but isn't a directory (#31).
+	if opts.SkillsPath != "" {
+		if info, statErr := os.Stat(opts.SkillsPath); statErr != nil || !info.IsDir() {
+			diags = append(diags, LintDiagnostic{
+				Level:   LevelWarn,
+				RuleID:  "SKILLS_PATH_INVALID",
+				Message: fmt.Sprintf("skills path %s is not a directory; no connector lint rules were loaded", opts.SkillsPath),
+			})
+		}
+	}
 	connRules, err := LoadConnectorRules(opts.SkillsPath)
 	if err != nil {
 		return diags, err

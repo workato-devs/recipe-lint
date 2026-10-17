@@ -20,6 +20,8 @@ const (
 	NodeElse    NodeKind = "else"
 	NodeTry     NodeKind = "try"
 	NodeCatch   NodeKind = "catch"
+	NodeForeach NodeKind = "foreach"
+	NodeRepeat  NodeKind = "repeat" // Go-only; the TS transformer defers repeat
 	NodeBranch  NodeKind = "branch"
 	NodeEnd     NodeKind = "end"
 )
@@ -33,6 +35,8 @@ const (
 	EdgeFalse    EdgeKind = "false"
 	EdgeError    EdgeKind = "error"
 	EdgeTerminal EdgeKind = "terminal"
+	EdgeLoop     EdgeKind = "loop" // loop node → body head, and body tail → loop node
+	EdgeExit     EdgeKind = "exit" // loop node → the step after the loop
 )
 
 // Node represents a single node in the IGM graph.
@@ -40,15 +44,15 @@ type Node struct {
 	ID                  string      `json:"id"`
 	Kind                NodeKind    `json:"kind"`
 	Label               string      `json:"label"`
-	Pointer             string      `json:"pointer"`                           // JSON Pointer into recipe
-	IsTerminal          bool        `json:"is_terminal,omitempty"`             // true for return_response / return_result / stop
-	Provider            *string     `json:"provider,omitempty"`                // connector provider name
-	ProviderDisplayName string      `json:"provider_display_name,omitempty"`   // human-readable provider name
-	StepAs              string      `json:"step_as,omitempty"`                 // step alias (used by datapills as "line")
-	StepName            string      `json:"step_name,omitempty"`               // action name
-	ParentID            string      `json:"parent_id,omitempty"`               // parent node ID for containment
-	HTTPStatus          string      `json:"http_status,omitempty"`             // for return_response actions
-	TriggerType         TriggerType `json:"trigger_type,omitempty"`            // classification of trigger type
+	Pointer             string      `json:"pointer"`                         // JSON Pointer into recipe
+	IsTerminal          bool        `json:"is_terminal,omitempty"`           // true for return_response / return_result / stop
+	Provider            *string     `json:"provider,omitempty"`              // connector provider name
+	ProviderDisplayName string      `json:"provider_display_name,omitempty"` // human-readable provider name
+	StepAs              string      `json:"step_as,omitempty"`               // step alias (used by datapills as "line")
+	StepName            string      `json:"step_name,omitempty"`             // action name
+	ParentID            string      `json:"parent_id,omitempty"`             // parent node ID for containment
+	HTTPStatus          string      `json:"http_status,omitempty"`           // for return_response actions
+	TriggerType         TriggerType `json:"trigger_type,omitempty"`          // classification of trigger type
 }
 
 // Edge represents a directed edge in the IGM graph.

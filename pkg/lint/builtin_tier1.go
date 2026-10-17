@@ -29,7 +29,11 @@ func init() {
 		return checkConfigProviderMatch(ctx.Parsed, ctx.ConnRules)
 	})
 
+	// Backs ACTION_NAME_VALID and ACTION_NAME_UNVERIFIED (the names it could not check).
 	RegisterBuiltin("check_action_name_valid", func(ctx *BuiltinContext, rule *CustomRule) []LintDiagnostic {
+		if rule.RuleID == "ACTION_NAME_UNVERIFIED" {
+			return checkActionNameUnverified(ctx.Parsed, ctx.ConnRules)
+		}
 		return checkActionNameValid(ctx.Parsed, ctx.ConnRules)
 	})
 

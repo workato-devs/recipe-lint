@@ -1,7 +1,9 @@
 name = "recipe-lint"
-version = "0.1.0"
+version = "1.2.0"
 description = "Tiered validation for Workato recipe JSON"
 entrypoint = "./recipe-lint"
+# What `wk plugins install` copies besides plugin.toml and the entrypoint (wk >= 1.1.0).
+files = ["profiles/*.json"]
 
 [hooks]
 pre-push = "lint.pre_push"

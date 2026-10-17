@@ -11,6 +11,7 @@
     "CONFIG_NO_WORKATO": "error",
     "CONFIG_PROVIDER_MATCH": "error",
     "ACTION_NAME_VALID": "error",
+    "ACTION_NAME_UNVERIFIED": "warn",
     "RESPONSE_CODES_DEFINED": "warn",
     "IF_NO_PROVIDER": "error",
     "ELSE_NO_PROVIDER": "error",

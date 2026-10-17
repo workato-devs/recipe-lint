@@ -2,6 +2,9 @@ package lint
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/workato-devs/recipe-lint/pkg/recipe"
@@ -417,5 +420,134 @@ func TestTier1_AllDiagsAreTier1(t *testing.T) {
 		if d.Tier != 1 {
 			t.Errorf("expected tier 1 for rule %s, got tier %d", d.RuleID, d.Tier)
 		}
+	}
+}
+
+func unverifiedDiags(diags []LintDiagnostic) []LintDiagnostic {
+	var out []LintDiagnostic
+	for _, d := range diags {
+		if d.RuleID == "ACTION_NAME_UNVERIFIED" {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// #31: a provider with no lint rules is reported once, at its first step, even
+// when no skills path was given at all.
+func TestTier1_ActionNameUnverified_NoRules(t *testing.T) {
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{Code: recipe.Code{Keyword: "trigger", Provider: strPtr("acme"), Name: "new_thing"}, JSONPointer: "/code"},
+		{Code: recipe.Code{Keyword: "action", Provider: strPtr("acme"), Name: "do_thing"}, JSONPointer: "/code/block/0"},
+		{Code: recipe.Code{Keyword: "action", Provider: strPtr("logger"), Name: "log_message"}, JSONPointer: "/code/block/1"},
+	}, nil)
+	for _, connRules := range []map[string]*ConnectorRules{nil, {"rest": {ValidActionNames: []string{"make_request_v2"}}}} {
+		got := unverifiedDiags(checkActionNameUnverified(parsed, connRules))
+		if len(got) != 2 {
+			t.Fatalf("expected 2 ACTION_NAME_UNVERIFIED (acme, logger), got %d: %v", len(got), got)
+		}
+		if got[0].Source.JSONPointer != "/code/provider" || got[1].Source.JSONPointer != "/code/block/1/provider" {
+			t.Errorf("unexpected pointers: %s, %s", got[0].Source.JSONPointer, got[1].Source.JSONPointer)
+		}
+		if got[0].Level != LevelInfo {
+			t.Errorf("expected info level, got %s", got[0].Level)
+		}
+	}
+}
+
+func TestTier1_ActionNameUnverified_RulesPresent(t *testing.T) {
+	connRules := map[string]*ConnectorRules{
+		"workato_db_table": {ValidTriggerNames: []string{"new_records_polling"}, ValidActionNames: []string{"add_record"}},
+	}
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{Code: recipe.Code{Keyword: "trigger", Provider: strPtr("workato_db_table"), Name: "new_records_polling"}, JSONPointer: "/code"},
+		// An invalid name is ACTION_NAME_VALID's finding, not an unverified one.
+		{Code: recipe.Code{Keyword: "action", Provider: strPtr("workato_db_table"), Name: "bogus"}, JSONPointer: "/code/block/0"},
+		{Code: recipe.Code{Keyword: "if"}, JSONPointer: "/code/block/1"},
+	}, nil)
+	if got := unverifiedDiags(checkActionNameUnverified(parsed, connRules)); len(got) != 0 {
+		t.Errorf("expected no ACTION_NAME_UNVERIFIED, got %v", got)
+	}
+}
+
+// Rules exist but declare no names for the step's kind: that kind is unverified.
+func TestTier1_ActionNameUnverified_EmptyListForKind(t *testing.T) {
+	connRules := map[string]*ConnectorRules{
+		"workato_variable": {ValidActionNames: []string{"declare_variable"}},
+	}
+	parsed := buildParsedRecipe("test", []recipe.FlatStep{
+		{Code: recipe.Code{Keyword: "trigger", Provider: strPtr("workato_variable"), Name: "some_trigger"}, JSONPointer: "/code"},
+		{Code: recipe.Code{Keyword: "action", Provider: strPtr("workato_variable"), Name: "declare_variable"}, JSONPointer: "/code/block/0"},
+	}, nil)
+	got := unverifiedDiags(checkActionNameUnverified(parsed, connRules))
+	if len(got) != 1 || got[0].Source.JSONPointer != "/code/provider" {
+		t.Fatalf("expected 1 ACTION_NAME_UNVERIFIED for the trigger, got %v", got)
+	}
+	if !strings.Contains(got[0].Message, "valid_trigger_names") {
+		t.Errorf("message should name the missing list: %s", got[0].Message)
+	}
+}
+
+// End to end: the shared check_action_name_valid builtin routes each rule ID to
+// its own check, so neither rule's findings appear under the other or twice.
+func TestTier1_ActionNameRules_LintRecipe(t *testing.T) {
+	skills := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(skills, "rest-recipes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rules := `{"version": "0.1.0", "connector": "rest", "valid_action_names": ["make_request_v2"]}`
+	if err := os.WriteFile(filepath.Join(skills, "rest-recipes", "lint-rules.json"), []byte(rules), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	data := []byte(`{"name": "t", "version": 1, "private": true, "concurrency": 1,
+		"config": [{"keyword": "application", "provider": "rest", "skip_validation": false, "account_id": null}],
+		"code": {"number": 0, "keyword": "trigger", "provider": "clock", "name": "scheduled_event", "as": "t", "uuid": "t-000", "input": {},
+		"block": [
+			{"number": 1, "keyword": "action", "provider": "rest", "name": "bogus", "as": "a", "uuid": "a-001", "input": {}},
+			{"number": 2, "keyword": "action", "provider": "logger", "name": "log_message", "as": "b", "uuid": "b-002", "input": {}}
+		]}}`)
+
+	count := func(diags []LintDiagnostic, id string) int {
+		n := 0
+		for _, d := range diags {
+			if d.RuleID == id {
+				n++
+			}
+		}
+		return n
+	}
+
+	diags, err := LintRecipe(data, LintOptions{Tiers: []int{1}, SkillsPath: skills})
+	if err != nil {
+		t.Fatalf("LintRecipe: %v", err)
+	}
+	if n := count(diags, "ACTION_NAME_VALID"); n != 1 {
+		t.Errorf("ACTION_NAME_VALID count = %d, want 1 (rest/bogus)", n)
+	}
+	if n := count(diags, "ACTION_NAME_UNVERIFIED"); n != 2 {
+		t.Errorf("ACTION_NAME_UNVERIFIED count = %d, want 2 (clock, logger)", n)
+	}
+	if n := count(diags, "SKILLS_PATH_INVALID"); n != 0 {
+		t.Errorf("unexpected SKILLS_PATH_INVALID for a valid skills dir")
+	}
+
+	// A skills path that isn't a directory is reported, not silently treated as "no rules".
+	for _, bad := range []string{filepath.Join(skills, "missing"), filepath.Join(skills, "rest-recipes", "lint-rules.json")} {
+		diags, err = LintRecipe(data, LintOptions{Tiers: []int{1}, SkillsPath: bad})
+		if err != nil {
+			t.Fatalf("LintRecipe(%s): %v", bad, err)
+		}
+		if n := count(diags, "SKILLS_PATH_INVALID"); n != 1 {
+			t.Errorf("skills path %s: SKILLS_PATH_INVALID count = %d, want 1", bad, n)
+		}
+	}
+
+	// No skills path at all is a normal run, not a misconfiguration.
+	diags, err = LintRecipe(data, LintOptions{Tiers: []int{1}})
+	if err != nil {
+		t.Fatalf("LintRecipe: %v", err)
+	}
+	if n := count(diags, "SKILLS_PATH_INVALID"); n != 0 {
+		t.Errorf("unexpected SKILLS_PATH_INVALID with no skills path")
 	}
 }

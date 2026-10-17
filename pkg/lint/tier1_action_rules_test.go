@@ -170,7 +170,7 @@ func TestActionRule_EISMustBeEmpty_Pass_EmptyArray(t *testing.T) {
 	step := recipe.FlatStep{
 		Code: recipe.Code{
 			Keyword: "action", Provider: strPtr("salesforce"),
-			Name: "search_sobjects_soql",
+			Name:                "search_sobjects_soql",
 			ExtendedInputSchema: json.RawMessage(`[]`),
 		},
 		JSONPointer: "/code/block/0",
@@ -192,7 +192,7 @@ func TestActionRule_EISMustBeEmpty_Fail(t *testing.T) {
 	step := recipe.FlatStep{
 		Code: recipe.Code{
 			Keyword: "action", Provider: strPtr("salesforce"),
-			Name: "search_sobjects_soql",
+			Name:                "search_sobjects_soql",
 			ExtendedInputSchema: json.RawMessage(`[{"name":"field"}]`),
 		},
 		JSONPointer: "/code/block/0",
@@ -214,7 +214,7 @@ func TestActionRule_EISMustBeEmpty_FlagFalse(t *testing.T) {
 	step := recipe.FlatStep{
 		Code: recipe.Code{
 			Keyword: "action", Provider: strPtr("salesforce"),
-			Name: "search_sobjects_soql",
+			Name:                "search_sobjects_soql",
 			ExtendedInputSchema: json.RawMessage(`[{"name":"field"}]`),
 		},
 		JSONPointer: "/code/block/0",

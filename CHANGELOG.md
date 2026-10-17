@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] -- 2026-10-17
+
+### Added
+
+- `ACTION_NAME_UNVERIFIED` (#31): `ACTION_NAME_VALID` only checks providers that have a
+  connector `lint-rules.json` under `--skills-path`. For every other provider it skipped
+  silently, so a clean lint couldn't be told apart from one where nothing was checked. The
+  new rule emits one `info` diagnostic per provider whose action/trigger names were not
+  validated (`warn` in the strict profile). Set it to `"error"` in `.wklintrc.json` to fail
+  CI on unverified connectors, or `"off"` to silence it. Expect it on most recipes for now:
+  Workato platform connectors such as `logger`, `workato_recipe_function` and
+  `workato_api_platform` don't have skills rules yet.
+- `SKILLS_PATH_INVALID` (#31): a `--skills-path` that doesn't exist or isn't a directory now
+  emits a warning instead of silently loading no connector rules.
+
+### Changed
+
+- `plugin.toml` declares `files = ["profiles/*.json"]` (wk#101). With wk 1.1.0+,
+  `wk plugins install` copies only the manifest, the binary and the profiles instead of the
+  whole directory. Older wk versions ignore the key.
+- CI (#29): pushes and PRs to `develop`/`main` now run build, `go vet`, a gofmt check and
+  tests (`make ci` runs the same checks locally).
+
+### Fixed
+
+- Loop control flow (#32): the control-flow graph that Tier 2-3 rules run on dropped
+  `foreach` and `repeat` blocks entirely, producing false positives on any recipe with a
+  loop. The bug was wider than #32 describes. The 1.1.0 build:
+  - didn't register the loop's own `as` alias, so `provider: "foreach"` datapills for the
+    current item failed `DP_LINE_RESOLVES`;
+  - didn't register the alias of any step inside a loop body (e.g. `get_email_detail` and
+    `find_contact` in the recipe-skills Gmail template), so datapills referencing them also
+    failed `DP_LINE_RESOLVES`;
+  - disconnected the steps after a loop, so datapills referencing steps before the loop
+    failed `DP_STEP_REACHABLE`;
+  - reported `ALL_PATHS_RETURN` on the step before a loop in API endpoint and callable
+    recipes, even when a return follows the loop.
+
+  Loops are now modeled in the graph. A recipe that genuinely ends in a loop without a
+  return is still flagged by `ALL_PATHS_RETURN`, now on the loop step itself.
+- Plugin version (#30): `plugin.toml`'s `version` had been stuck at `0.1.0` since the plugin
+  was scaffolded, so `wk plugins install` and `wk plugins list` reported `v0.1.0` whatever
+  release was installed. It now matches the release.
+
 ## [1.1.0] -- 2026-08-01
 
 ### Added

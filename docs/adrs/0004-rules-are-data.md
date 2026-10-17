@@ -1,6 +1,7 @@
 # Rules Are Data, Not Code
 
 **Author(s):** Zayne Turner, Claude [role: assistant; harness: Claude Code; model: Opus 4.8]
+**Amended-by:** Claude [role: assistant; harness: Claude Code; model: Opus 5.5], dir. Zayne Turner — October 2026
 **Amended-by:** Claude [role: assistant; harness: Claude Code; model: Opus 4.8], dir. Zayne Turner — June 2026
 
 **Status:** Accepted
@@ -12,6 +13,7 @@
 - June 2026 — Recorded the `lint-rules.json` contract's downstream consumer (the agent-skills repo) and pointed to the Labs-repo ADR that owns that cross-repo decision.
 - June 2026 — Added the `check_return_response_schema` builtin (issue #17), taking the builtin count from 27 to 28; recorded that issue #18 is addressed as recipe-skills allowlist data (no rule in this binary).
 - June 2026 — Added the `DP_PATH_RESOLVES` rule (issue #22), backed by Go via the existing `check_dataflow` builtin (no new `RegisterBuiltin`; registered-builtin count stays 28). Grows the Go-backed rule-ID surface — debt counted deliberately.
+- October 2026 — Added `ACTION_NAME_UNVERIFIED` (issue #31) via the existing `check_action_name_valid` builtin (registered-builtin count stays 28; Go-backed rule IDs +1).
 
 ---
 
@@ -144,5 +146,29 @@ The principle is that the declarative path is the default and the `builtin` path
 >   is a candidate for the "expand the declarative vocabulary vs. accept bounded builtins as
 >   legitimate" decision this ADR already flagged under Follow-on work, since connector-schema
 >   data is exactly the "rules as data" path.
+
+> **Amendment (October 2026): `ACTION_NAME_UNVERIFIED` (issue #31) is a new Go-backed rule — the registered-builtin count is unchanged.**
+> `ACTION_NAME_VALID` only checks providers that have a connector `lint-rules.json`. For any
+> other provider it was silent, so a skipped check looked the same as a pass. The new rule
+> reports, once per provider, steps whose names could not be checked. It covers two cases:
+> no rules file was loaded for the provider, or the file declares no names for that step
+> kind.
+>
+> - **Debt-metric precision.** The rule routes through the **existing**
+>   `check_action_name_valid` builtin, which now dispatches on rule ID. No new registration,
+>   so the **registered-builtin count stays 28**. The count of Go-backed rule IDs grows by one.
+>   "Which providers in this recipe have no loaded rules data" is a question about the
+>   rules-loading context, not about a recipe field, so the assertion vocabulary can't
+>   express it.
+> - **Rules as data is how it gets resolved.** The diagnostic tells the reader exactly which
+>   connectors are missing allowlist data. The fix is data: a `lint-rules.json` in
+>   recipe-skills. Code changes don't fix it, and in particular there's no hardcoded
+>   exemption list of platform providers in this binary, because that would just hide the
+>   skip again. At the time of writing, most of the volume comes from Workato platform
+>   connectors (`logger`, `workato_recipe_function`, `workato_api_platform`) that have no
+>   skills data yet.
+> - **Load-time companion.** A `--skills-path` that isn't a directory now emits
+>   `SKILLS_PATH_INVALID` from the pipeline (like `CUSTOM_RULE_INVALID`). It isn't a catalog
+>   rule and adds no builtin.
 
 <!-- When this evolves, add a dated amendment in place; do not rewrite the above. -->

@@ -1,0 +1,44 @@
+{
+  "name": "foreach dataflow",
+  "version": 1,
+  "private": true,
+  "concurrency": 1,
+  "config": [
+    { "keyword": "application", "provider": "salesforce", "skip_validation": false, "account_id": null },
+    { "keyword": "application", "provider": "logger", "skip_validation": false, "account_id": null },
+    { "keyword": "application", "provider": "clock", "skip_validation": false, "account_id": null }
+  ],
+  "code": {
+    "number": 0, "keyword": "trigger", "provider": "clock", "name": "scheduled_event",
+    "as": "daily", "uuid": "trigger-000",
+    "input": { "time_unit": "days", "trigger_every": "1" },
+    "block": [
+      {
+        "number": 1, "keyword": "action", "provider": "salesforce",
+        "name": "search_sobjects_soql", "as": "search_rows", "uuid": "search-001",
+        "input": { "sobject_name": "Account", "query": "SELECT Id FROM Account" },
+        "extended_output_schema": [
+          { "label": "Records", "name": "records", "type": "array", "of": "object",
+            "properties": [ { "control_type": "text", "label": "Id", "name": "Id", "type": "string" } ] }
+        ]
+      },
+      {
+        "number": 2, "keyword": "foreach", "as": "row", "repeat_mode": "simple",
+        "clear_scope": "false", "uuid": "foreach-002", "input": {},
+        "source": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"salesforce\",\"line\":\"search_rows\",\"path\":[\"records\"]}')}",
+        "block": [
+          {
+            "number": 3, "keyword": "action", "provider": "logger", "name": "log_message",
+            "as": "log_row", "uuid": "log-003",
+            "input": { "message": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"foreach\",\"line\":\"row\",\"path\":[\"Id\"]}')}" }
+          }
+        ]
+      },
+      {
+        "number": 4, "keyword": "action", "provider": "logger", "name": "log_message",
+        "as": "log_done", "uuid": "log-004",
+        "input": { "message": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"salesforce\",\"line\":\"search_rows\",\"path\":[\"records\",{\"path_element_type\":\"size\"}]}')}" }
+      }
+    ]
+  }
+}

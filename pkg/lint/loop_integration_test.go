@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -80,5 +81,64 @@ func TestInside_Catch(t *testing.T) {
 	}
 	if outsideCatch == 0 {
 		t.Errorf("expected some actions outside catch, got %d", outsideCatch)
+	}
+}
+
+// Issue #32: the foreach alias resolves, and steps on either side of the loop
+// stay reachable. The repo's own repeat fixture had the same false positive.
+func TestLoopDataFlow_NoFalsePositives(t *testing.T) {
+	for _, name := range []string{"foreach_dataflow.recipe.json", "repeat_while_correct.recipe.json"} {
+		data, err := os.ReadFile("testdata/fixtures/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		diags, err := LintRecipe(data, LintOptions{Tiers: []int{2, 3}})
+		if err != nil {
+			t.Fatalf("LintRecipe(%s): %v", name, err)
+		}
+		for _, d := range diags {
+			switch d.RuleID {
+			case "DP_LINE_RESOLVES", "DP_STEP_REACHABLE", "DP_PROVIDER_MATCHES":
+				t.Errorf("%s: unexpected %s at %s: %s", name, d.RuleID, d.Source.JSONPointer, d.Message)
+			}
+		}
+	}
+}
+
+// Loops are real control flow for ALL_PATHS_RETURN: a return after the loop
+// covers the path; a loop that ends the recipe is the dangling path.
+func TestLoopAllPathsReturn(t *testing.T) {
+	const tmpl = `{"name": "loop return", "version": 1, "private": true, "concurrency": 1,
+		"config": [{"keyword": "application", "provider": "workato_api_platform", "skip_validation": false, "account_id": null}],
+		"code": {"number": 0, "keyword": "trigger", "provider": "workato_api_platform", "name": "receive_request", "as": "trigger", "uuid": "trig", "input": {},
+		"block": [
+			{"number": 1, "keyword": "action", "provider": "logger", "name": "log_message", "as": "before", "uuid": "before", "input": {}},
+			{"number": 2, "keyword": "foreach", "as": "row", "uuid": "loop", "input": {}, "block": [
+				{"number": 3, "keyword": "action", "provider": "logger", "name": "log_message", "as": "body", "uuid": "body", "input": {}}
+			]}%s
+		]}}`
+	const ret = `,
+			{"number": 4, "keyword": "action", "provider": "workato_api_platform", "name": "return_response", "as": "ret", "uuid": "ret", "input": {"http_status_code": "200"}}`
+
+	allPathsReturn := func(src string) []string {
+		t.Helper()
+		diags, err := LintRecipe([]byte(src), LintOptions{Tiers: []int{2}})
+		if err != nil {
+			t.Fatalf("LintRecipe: %v", err)
+		}
+		var ptrs []string
+		for _, d := range diags {
+			if d.RuleID == "ALL_PATHS_RETURN" {
+				ptrs = append(ptrs, d.Source.JSONPointer)
+			}
+		}
+		return ptrs
+	}
+
+	if got := allPathsReturn(fmt.Sprintf(tmpl, ret)); len(got) != 0 {
+		t.Errorf("return after loop: unexpected ALL_PATHS_RETURN at %v", got)
+	}
+	if got := allPathsReturn(fmt.Sprintf(tmpl, "")); len(got) != 1 || got[0] != "/code/block/1" {
+		t.Errorf("loop ends recipe: ALL_PATHS_RETURN at %v, want exactly [/code/block/1]", got)
 	}
 }

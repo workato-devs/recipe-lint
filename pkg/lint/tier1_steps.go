@@ -271,6 +271,51 @@ func checkActionNameValid(parsed *recipe.ParsedRecipe, connRules map[string]*Con
 	return diags
 }
 
+// checkActionNameUnverified reports, once per provider, steps whose action or
+// trigger name ACTION_NAME_VALID could not check: no lint-rules.json was loaded
+// for the provider, or its file declares no names for that step kind. Without
+// it, a skipped check is indistinguishable from a pass (#31).
+// Rule: ACTION_NAME_UNVERIFIED
+func checkActionNameUnverified(parsed *recipe.ParsedRecipe, connRules map[string]*ConnectorRules) []LintDiagnostic {
+	var diags []LintDiagnostic
+	seen := make(map[string]bool)
+	for _, step := range parsed.Steps {
+		if step.Code.Provider == nil || *step.Code.Provider == "" || step.Code.Name == "" {
+			continue
+		}
+		provider := *step.Code.Provider
+		kind, field := "action", "valid_action_names"
+		if step.Code.Keyword == "trigger" {
+			kind, field = "trigger", "valid_trigger_names"
+		}
+
+		var key, msg string
+		cr, ok := connRules[provider]
+		switch {
+		case !ok:
+			key = provider
+			msg = fmt.Sprintf("No lint rules found for provider %q; action and trigger names were not validated", provider)
+		case kind == "trigger" && len(cr.ValidTriggerNames) == 0, kind == "action" && len(cr.ValidActionNames) == 0:
+			key = provider + "/" + kind
+			msg = fmt.Sprintf("Lint rules for provider %q declare no %s; %s names were not validated", provider, field, kind)
+		default:
+			continue
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		diags = append(diags, LintDiagnostic{
+			Level:   LevelInfo,
+			Message: msg,
+			Source:  &SourceRef{JSONPointer: step.JSONPointer + "/provider"},
+			RuleID:  "ACTION_NAME_UNVERIFIED",
+			Tier:    1,
+		})
+	}
+	return diags
+}
+
 // checkActionRules evaluates legacy v0.1.0 ActionRules from connector rules.
 func checkActionRules(parsed *recipe.ParsedRecipe, connRules map[string]*ConnectorRules) []LintDiagnostic {
 	var diags []LintDiagnostic
